@@ -3,6 +3,27 @@ import sys
 from DrissionPage import ChromiumPage, ChromiumOptions
 import yt_dlp
 
+def download_one(args):
+    info, collection_dir = args
+    opts = {
+        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best',
+        'outtmpl': os.path.join(collection_dir, '%(title)s.%(ext)s'),
+        'merge_output_format': 'mp4',
+    }
+    if os.path.exists('cookies.txt'):
+        opts['cookiefile'] = 'cookies.txt'
+    else:
+        opts['cookiesfrombrowser'] = ('chrome',)
+    url = info['视频详情链接']
+    title = info['视频标题']
+    print(f'\n[开始] {title}')
+    try:
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            ydl.download([url])
+        print(f'[完成] {title}')
+    except Exception as e:
+        print(f'[失败] {title}: {e}')
+
 def get_video_info(video_url):
     ydl_opts = {
         'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best',
@@ -148,25 +169,11 @@ def main():
         return
         
     print("\n开始批量下载...")
-    download_opts = {
-        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best',
-        'outtmpl': os.path.join(collection_dir, '%(title)s.%(ext)s'),
-        'merge_output_format': 'mp4',
-    }
-    
-    if os.path.exists("cookies.txt"):
-        download_opts['cookiefile'] = 'cookies.txt'
-    else:
-        download_opts['cookiesfrombrowser'] = ('chrome',)
-        
-    with yt_dlp.YoutubeDL(download_opts) as ydl:
-        for info in videos_data:
-            url = info['视频详情链接']
-            print(f"\n正在下载: {info['视频标题']}...")
-            try:
-                ydl.download([url])
-            except Exception as e:
-                print(f"下载失败: {e}")
+
+    for info in videos_data:
+        url = info['视频详情链接']
+        print(f"\n正在下载: {info['视频标题']}...")
+        download_one((info, collection_dir))
                 
     print(f"\n全部下载完成！文件保存在: {collection_dir}")
 
