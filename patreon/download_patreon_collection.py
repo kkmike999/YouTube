@@ -1,6 +1,6 @@
 import os
 import sys
-from DrissionPage import ChromiumPage
+from DrissionPage import ChromiumPage, ChromiumOptions
 import yt_dlp
 
 def get_video_info(video_url):
@@ -68,7 +68,8 @@ def main():
     base_download_dir = os.path.join(os.getcwd(), "download")
     
     print("正在启动浏览器并打开合集页面...")
-    page = ChromiumPage()
+    co = ChromiumOptions().headless()
+    page = ChromiumPage(addr_or_opts=co)
     page.get(collection_url)
     
     print("等待页面加载...")
