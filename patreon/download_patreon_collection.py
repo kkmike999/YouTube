@@ -1,21 +1,35 @@
 import os
 import sys
+import random
+import string
 from DrissionPage import ChromiumPage, ChromiumOptions
 import yt_dlp
+from yt_dlp.utils import sanitize_filename
 
 def download_one(args):
     info, collection_dir = args
+    url = info['视频详情链接']
+    title = info['视频标题']
+    
+    expected_file = os.path.join(collection_dir, f"{sanitize_filename(title)}.mp4")
+    
+    if os.path.exists(expected_file):
+        rand_str = random.choice(string.ascii_letters) + str(random.randint(0, 9))
+        outtmpl = os.path.join(collection_dir, f"%(title)s_{rand_str}.%(ext)s")
+        print(f"\n[提示] 文件已存在，即将添加随机后缀: _{rand_str}")
+    else:
+        outtmpl = os.path.join(collection_dir, '%(title)s.%(ext)s')
+
     opts = {
         'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best',
-        'outtmpl': os.path.join(collection_dir, '%(title)s.%(ext)s'),
+        'outtmpl': outtmpl,
         'merge_output_format': 'mp4',
     }
     if os.path.exists('cookies.txt'):
         opts['cookiefile'] = 'cookies.txt'
     else:
         opts['cookiesfrombrowser'] = ('chrome',)
-    url = info['视频详情链接']
-    title = info['视频标题']
+        
     print(f'\n[开始] {title}')
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:
@@ -77,9 +91,16 @@ def get_video_info(video_url):
         return None
 
 def main():
-    if len(sys.argv) > 1:
-        collection_url = sys.argv[1]
-    else:
+    auto_download = False
+    collection_url = ""
+    for arg in sys.argv[1:]:
+        if arg.startswith("--auto-download="):
+            if arg.split("=")[1].lower() == "true":
+                auto_download = True
+        elif not arg.startswith("--") and not collection_url:
+            collection_url = arg
+
+    if not collection_url:
         collection_url = input("请输入 Patreon 合集链接 (例如: https://www.patreon.com/collection/1279499?view=expanded): ").strip()
 
     if not collection_url or "patreon.com" not in collection_url:
@@ -163,10 +184,13 @@ def main():
         return
         
     # 6. 让用户确认是否下载所有文件到合集目录，点击回车后，下载
-    choice = input(f"是否将以上所有文件下载到合集目录 [{collection_dir}] ? (按回车键开始下载，输入 'n' 等任意其他键取消): ")
-    if choice.strip() != '':
-        print("已取消下载。")
-        return
+    if not auto_download:
+        choice = input(f"是否将以上所有文件下载到合集目录 [{collection_dir}] ? (按回车键开始下载，输入 'n' 等任意其他键取消): ")
+        if choice.strip() != '':
+            print("已取消下载。")
+            return
+    else:
+        print(f"\n[自动下载模式] 将把以上所有文件下载到合集目录 [{collection_dir}]")
         
     print("\n开始批量下载...")
 
@@ -179,3 +203,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    #print("Hello World")
