@@ -2,6 +2,7 @@ import os
 import sys
 import random
 import string
+import requests
 from DrissionPage import ChromiumPage, ChromiumOptions
 import yt_dlp
 from yt_dlp.utils import sanitize_filename
@@ -92,11 +93,15 @@ def get_video_info(video_url):
 
 def main():
     auto_download = False
+    cover_only = False
     collection_url = ""
     for arg in sys.argv[1:]:
         if arg.startswith("--auto-download="):
             if arg.split("=")[1].lower() == "true":
                 auto_download = True
+        elif arg == "--cover-only":
+            cover_only = True
+            auto_download = True  # 有 --cover-only 时自动下载
         elif not arg.startswith("--") and not collection_url:
             collection_url = arg
 
@@ -135,71 +140,159 @@ def main():
     xpath_expr = '//div[contains(@class, "CardLayout-module") and contains(@class, "CollectionPostList-module") and @data-cardlayout-edgeless="true"]'
     container = page.ele(f'x:{xpath_expr}', timeout=10)
     
-    video_links = []
+    video_links = [] # 存储字典: {'url': href, 'cover': ''}
     if container:
         a_tags = container.eles('tag:a')
         for a in a_tags:
             href = a.attr('href')
             if href and '/posts/' in href:
-                if href not in video_links:
-                    video_links.append(href)
+                existing = next((v for v in video_links if v['url'] == href), None)
+                if not existing:
+                    video_links.append({'url': href, 'cover': ''})
     else:
         print("未找到包含视频链接的容器区域！")
         
-    print(f"共提取到 {len(video_links)} 个视频详情链接。\n")
+    print(f"共提取到 {len(video_links)} 个视频详情。\n")
     if not video_links:
         page.quit()
         return
         
-    page.quit() # 获取完链接就可以关闭浏览器了
+    # 为了获取详情页的封面，我们先不关闭 page
+    # page.quit() # 获取完链接就可以关闭浏览器了
     
-    # 4. 获取每个视频详情页视频信息及下载链接
-    videos_data = []
-    print("开始获取视频详细信息 (这可能需要一些时间)...")
-    for idx, link in enumerate(video_links, 1):
-        print(f"[{idx}/{len(video_links)}] 正在解析: {link}")
-        info = get_video_info(link)
-        if info:
-            videos_data.append(info)
-            
-    # 5. 把上面获取的所有信息，整理成Markdown表格 并打印出来保存到文件
-    if videos_data:
-        markdown_str = f"### {collection_name} 视频信息列表\n\n"
-        markdown_str += "| 视频标题 | 清晰度 | 总码率 | 视频详情链接 | 视频下载链接 |\n"
-        markdown_str += "|---|---|---|---|---|\n"
-        for info in videos_data:
-            markdown_str += f"| {info['视频标题']} | {info['清晰度']} | {info['总码率']} | {info['视频详情链接']} | {info['视频下载的链接']} |\n"
-            
-        print("\n\n" + markdown_str)
-        
-        md_file_path = os.path.join(collection_dir, f"{collection_name}.md")
-        try:
-            with open(md_file_path, "w", encoding="utf-8") as f:
-                f.write(markdown_str)
-            print(f"数据已保存至: {md_file_path}\n")
-        except Exception as e:
-            print(f"保存 Markdown 文件失败: {e}\n")
-    else:
-        print("未能获取到任何视频的详细信息，无法生成表格。")
-        return
-        
-    # 6. 让用户确认是否下载所有文件到合集目录，点击回车后，下载
+    # 4. 询问用户是否开始逐个获取并下载
     if not auto_download:
-        choice = input(f"是否将以上所有文件下载到合集目录 [{collection_dir}] ? (按回车键开始下载，输入 'n' 等任意其他键取消): ")
+        choice = input(f"即将开始逐个获取并下载共 {len(video_links)} 个视频到合集目录 [{collection_dir}]。是否继续? (按回车键开始，输入 'n' 等任意其他键取消): ")
         if choice.strip() != '':
-            print("已取消下载。")
+            print("已取消。")
             return
     else:
-        print(f"\n[自动下载模式] 将把以上所有文件下载到合集目录 [{collection_dir}]")
-        
-    print("\n开始批量下载...")
+        print(f"\n[自动下载模式] 即将开始逐个获取并下载共 {len(video_links)} 个视频到合集目录 [{collection_dir}]")
 
-    for info in videos_data:
-        url = info['视频详情链接']
-        print(f"\n正在下载: {info['视频标题']}...")
-        download_one((info, collection_dir))
+    # 5. 初始化 Markdown 文件
+    md_file_path = os.path.join(collection_dir, f"{collection_name}.md")
+    markdown_str = f"### {collection_name} 视频信息列表\n\n"
+    markdown_str += "| 视频标题 | 视频封面 | 清晰度 | 总码率 | 视频详情链接 | 视频下载链接 |\n"
+    markdown_str += "|---|---|---|---|---|---|\n"
+    try:
+        with open(md_file_path, "w", encoding="utf-8") as f:
+            f.write(markdown_str)
+    except Exception as e:
+        print(f"初始化 Markdown 文件失败: {e}\n")
+
+    # 6. 逐个获取视频详情、封面图片并下载
+    videos_data = []
+    print(f"\n开始逐个获取信息并下载 (共 {len(video_links)} 个视频)...")
+    for idx, item in enumerate(video_links, 1):
+        link = item['url']
+        print(f"\n--------------------------------------------------")
+        
+        # 打开详情页获取封面
+        cover_url = ""
+        try:
+            print(f"[{idx}/{len(video_links)}] 正在获取详情页封面: {link}")
+            page.get(link)
+            # 给页面足够的时间去渲染
+            # page.wait.ele_displayed('tag:img', timeout=10)
+            
+            # 首先尝试查找指定的封面容器 kpWLcK
+            cover_div = page.ele('.kpWLcK', timeout=2)
+            if cover_div:
+                img_ele = cover_div.ele('tag:img', timeout=1)
+                if img_ele:
+                    cover_url = img_ele.attr('src')
+            
+            # 如果没找到，尝试通过 patreon-media/p/post 的图片特征寻找
+            if not cover_url:
+                imgs = page.eles('tag:img')
+                for img in imgs:
+                    src = img.attr('src')
+                    if src and '/patreon-media/p/post/' in src:
+                        cover_url = src
+                        break
+        except Exception as e:
+            print(f"获取详情页封面失败: {e}")
+            
+        item['cover'] = cover_url
+        
+        # 下载封面图片
+        local_cover_path = ""
+        cover_filename = ""
+        if cover_url:
+            try:
+                print(f"[{idx}/{len(video_links)}] 正在下载封面...")
+                cover_ext = cover_url.split('?')[0].split('.')[-1]
+                if len(cover_ext) > 4 or not cover_ext: 
+                    cover_ext = "jpg"
                 
-    print(f"\n全部下载完成！文件保存在: {collection_dir}")
+                # 如果是 cover_only 模式，我们直接拿链接的最后一段作名字，或者用 idx
+                if cover_only:
+                    cover_filename = f"cover_{idx}.{cover_ext}"
+                else:
+                    cover_filename = f"temp_cover_{idx}.{cover_ext}"
+                    
+                local_cover_path = os.path.join(collection_dir, cover_filename)
+                r = requests.get(cover_url, timeout=10)
+                if r.status_code == 200:
+                    with open(local_cover_path, 'wb') as f:
+                        f.write(r.content)
+            except Exception as e:
+                print(f"[{idx}/{len(video_links)}] 下载封面失败: {e}")
+                local_cover_path = ""
+                
+        if cover_only:
+            # 仅下载封面模式
+            cover_md = f"<img src='{cover_url}' width='200'>" if cover_url else "无封面"
+            row_str = f"| (未解析) | {cover_md} | - | - | {link} | - |\n"
+            try:
+                with open(md_file_path, "a", encoding="utf-8") as f:
+                    f.write(row_str)
+            except Exception as e:
+                pass # 忽略追加错误
+            continue
+            
+        print(f"[{idx}/{len(video_links)}] 正在解析视频详情: {link}")
+        info = get_video_info(link)
+        if info:
+            info['封面链接'] = cover_url
+            videos_data.append(info)
+            
+            # 拿到视频标题后，将临时封面文件重命名为正式的文件名
+            if local_cover_path and os.path.exists(local_cover_path):
+                cover_filename = f"{sanitize_filename(info['视频标题'])}_cover.{cover_ext}"
+                final_cover_path = os.path.join(collection_dir, cover_filename)
+                try:
+                    if os.path.exists(final_cover_path):
+                        os.remove(final_cover_path)
+                    os.rename(local_cover_path, final_cover_path)
+                    local_cover_path = final_cover_path
+                except Exception as e:
+                    print(f"重命名封面文件失败: {e}")
+            
+            # 增量追加到 Markdown 文件
+            cover_md = f"<img src='{cover_url}' width='200'>" if cover_url else "无封面"
+            row_str = f"| {info['视频标题']} | {cover_md} | {info['清晰度']} | {info['总码率']} | {info['视频详情链接']} | {info['视频下载的链接']} |\n"
+            try:
+                with open(md_file_path, "a", encoding="utf-8") as f:
+                    f.write(row_str)
+            except Exception as e:
+                pass # 忽略追加错误
+            
+            print(f"[{idx}/{len(video_links)}] 正在下载视频: {info['视频标题']}...")
+            download_one((info, collection_dir))
+        else:
+            print(f"[{idx}/{len(video_links)}] 解析详情失败，跳过下载。")
+            # 如果解析失败，把临时封面文件删掉
+            if local_cover_path and os.path.exists(local_cover_path):
+                try:
+                    os.remove(local_cover_path)
+                except:
+                    pass
+                    
+    page.quit() # 所有任务完成后关闭浏览器
+            
+    print(f"\n全部处理完成！合集信息已保存在: {md_file_path}")
+    print(f"视频文件保存在: {collection_dir}")
 
 if __name__ == "__main__":
     main()
