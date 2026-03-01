@@ -1,11 +1,29 @@
 import os
 import sys
+import time
 import random
 import string
 import requests
 from DrissionPage import ChromiumPage, ChromiumOptions
 import yt_dlp
 from yt_dlp.utils import sanitize_filename
+
+def wait_if_challenged(page):
+    """
+    检测 Patreon/Cloudflare 实人验证页面，若检测到则暂停脚本，
+    等待用户手动完成验证后按回车继续。
+
+    触发条件（满足任一）：
+      - 页面标题含 "Just a moment" / "Security Check" / "Verify you are human"
+      - 当前 URL 含 "/challenge" 或 "cloudflare"
+    """
+    challenge_titles = ("just a moment", "security check", "verify you are human", "attention required")
+    title = page.title.lower()
+    url = page.url.lower()
+    if any(k in title for k in challenge_titles) or "/challenge" in url or "cloudflare" in url:
+        print("\n[!] 检测到实人验证页面，请在浏览器中手动完成验证。")
+        input("    完成后按回车键继续...")
+
 
 # 下载单个视频
 def download_one(args):
@@ -80,7 +98,10 @@ def fetch_and_save_cover(page, link, collection_dir, idx):
     local_cover_path = ""
 
     try:
+        # 随机延迟 2~6 秒，模拟人工浏览节奏，降低被风控的概率
+        time.sleep(random.uniform(2, 6))
         page.get(link)
+        wait_if_challenged(page)
 
         post_title = page.title.removesuffix(" | Patreon").strip()
 
@@ -282,8 +303,16 @@ def main():
     
     print("正在启动浏览器并打开合集页面...")
     co = ChromiumOptions()  # 非无头模式，避免 Patreon 检测到机器人而拒绝渲染页面
+    # 屏蔽 navigator.webdriver 标志，降低被反爬识别的概率
+    co.set_argument('--disable-blink-features=AutomationControlled')
+    co.set_pref('excludeSwitches', ['enable-automation'])
+    co.set_pref('useAutomationExtension', False)
     page = ChromiumPage(addr_or_opts=co)
+    # 覆盖 JS 层的 webdriver 属性，防止页面脚本检测
+    page.run_cdp('Page.addScriptToEvaluateOnNewDocument',
+                 source='Object.defineProperty(navigator,"webdriver",{get:()=>undefined})')
     page.get(collection_url)
+    wait_if_challenged(page)
     
     print("等待页面加载...")
     # 1. 找到'<div elementtiming="Collection : Cover" data-is-key-element="true">Moe</div>'
