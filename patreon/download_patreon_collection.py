@@ -7,7 +7,19 @@ from DrissionPage import ChromiumPage, ChromiumOptions
 import yt_dlp
 from yt_dlp.utils import sanitize_filename
 
+# 下载单个视频
 def download_one(args):
+    """
+    下载单个视频到指定目录。
+
+    参数：
+      args: (info, collection_dir) 元组
+        - info          : get_video_info() 返回的字典，需包含 '视频详情链接' 和 '视频标题'
+        - collection_dir: 视频保存目录
+
+    若目标文件已存在，则在文件名末尾追加随机后缀（字母+数字）避免覆盖。
+    Cookie 优先读取 cookies.txt，否则从本地 Chrome 浏览器读取。
+    """
     info, collection_dir = args
     url = info['视频详情链接']
     title = info['视频标题']
@@ -39,7 +51,162 @@ def download_one(args):
     except Exception as e:
         print(f'[失败] {title}: {e}')
 
+# 获取详情页封面
+def fetch_and_save_cover(page, link, collection_dir, idx):
+    """
+    导航到帖子详情页，提取封面图片 URL 并下载保存。
+
+    封面查找策略（依次尝试）：
+      1. XPath 定位 class 含 "dkLWJN" 的封面容器，取其子 <img> 的 src
+         （DrissionPage CSS 选择器不支持含数字的类名 sc-891badcd-1，改用 XPath）
+      2. 遍历页面所有 <img>，取第一个 URL 含 /patreon-media/p/post/ 的图片
+
+    封面文件名为 "{帖子标题}.{ext}"，标题从浏览器页面标题获取（去掉末尾 " | Patreon"）。
+    若标题获取失败则以 "cover_{idx}.{ext}" 兜底命名。
+
+    参数：
+      page          : DrissionPage ChromiumPage 实例
+      link          : 帖子详情页 URL（如 https://www.patreon.com/posts/xxxxxx）
+      collection_dir: 封面图片保存目录
+      idx           : 当前视频序号，仅用于标题获取失败时的兜底文件名
+
+    返回 (cover_url, post_title, local_cover_path)：
+      - cover_url       : 封面原始 URL，未找到时为空字符串
+      - post_title      : 帖子标题，获取失败时为空字符串
+      - local_cover_path: 封面本地保存路径，下载失败时为空字符串
+    """
+    cover_url = ""
+    post_title = ""
+    local_cover_path = ""
+
+    try:
+        page.get(link)
+
+        post_title = page.title.removesuffix(" | Patreon").strip()
+
+        # 首先通过 xpath 定位封面容器 (class=dkLWJN)，再取其子 img
+        # 注意：DrissionPage CSS 选择器不支持含数字的类名如 sc-891badcd-1，需改用 xpath
+        cover_div = page.ele('x://div[contains(@class,"dkLWJN")]', timeout=3)
+        if cover_div:
+            img_ele = cover_div.ele('tag:img', timeout=2)
+            if img_ele:
+                cover_url = img_ele.attr('src')
+
+        # 兜底：遍历所有 img，取第一个 patreon-media/p/post 路径的图片
+        if not cover_url:
+            for img in page.eles('tag:img'):
+                src = img.attr('src')
+                if src and '/patreon-media/p/post/' in src:
+                    cover_url = src
+                    break
+    except Exception as e:
+        print(f"获取详情页封面失败: {e}")
+
+    if cover_url:
+        try:
+            cover_ext = cover_url.split('?')[0].split('.')[-1]
+            if len(cover_ext) > 4 or not cover_ext:
+                cover_ext = "jpg"
+
+            cover_name = sanitize_filename(post_title) if post_title else f"cover_{idx}"
+            local_cover_path = os.path.join(collection_dir, f"{cover_name}.{cover_ext}")
+
+            r = requests.get(cover_url, timeout=10)
+            if r.status_code == 200:
+                with open(local_cover_path, 'wb') as f:
+                    f.write(r.content)
+            else:
+                local_cover_path = ""
+        except Exception as e:
+            print(f"下载封面失败: {e}")
+            local_cover_path = ""
+
+    return cover_url, post_title, local_cover_path
+
+# 获取视频详情（yt-dlp解析视频元数据）
+def process_all_videos(page, video_links, collection_dir, cover_only, md_file_path):
+    """
+    遍历所有视频链接，逐一获取封面、解析元数据并下载视频，同时增量写入 Markdown 记录。
+
+    每条视频的处理流程：
+      1. 调用 fetch_and_save_cover() 打开详情页、下载封面
+      2. cover_only 模式：仅写入 Markdown 行后跳过，不下载视频
+      3. 普通模式：调用 get_video_info() 解析元数据 → 写入 Markdown → 调用 download_one() 下载视频
+         若元数据解析失败，则删除已下载的封面文件
+
+    参数：
+      page          : DrissionPage ChromiumPage 实例（浏览器已打开）
+      video_links   : 视频链接列表，每项为 {'url': str, 'cover': str}
+      collection_dir: 视频与封面的保存目录
+      cover_only    : 为 True 时仅下载封面，跳过视频下载
+      md_file_path  : 增量追加视频信息行的 Markdown 文件路径
+
+    返回：
+      videos_data: 成功解析的视频信息字典列表（cover_only 模式下为空列表）
+    """
+    videos_data = []
+    print(f"\n开始逐个获取信息并下载 (共 {len(video_links)} 个视频)...")
+    for idx, item in enumerate(video_links, 1):
+        link = item['url']
+        print(f"\n--------------------------------------------------")
+
+        print(f"[{idx}/{len(video_links)}] 正在获取详情页封面: {link}")
+        cover_url, post_title, local_cover_path = fetch_and_save_cover(page, link, collection_dir, idx)
+        item['cover'] = cover_url
+
+        if cover_only:
+            cover_md = f"<img src='{cover_url}' width='200'>" if cover_url else "无封面"
+            row_str = f"| (未解析) | {cover_md} | - | - | {link} | - |\n"
+            try:
+                with open(md_file_path, "a", encoding="utf-8") as f:
+                    f.write(row_str)
+            except Exception:
+                pass
+            continue
+
+        print(f"[{idx}/{len(video_links)}] 正在解析视频详情: {link}")
+        info = get_video_info(link)
+        if info:
+            info['封面链接'] = cover_url
+            videos_data.append(info)
+
+            cover_md = f"<img src='{cover_url}' width='200'>" if cover_url else "无封面"
+            row_str = f"| {info['视频标题']} | {cover_md} | {info['清晰度']} | {info['总码率']} | {info['视频详情链接']} | {info['视频下载的链接']} |\n"
+            try:
+                with open(md_file_path, "a", encoding="utf-8") as f:
+                    f.write(row_str)
+            except Exception:
+                pass
+
+            print(f"[{idx}/{len(video_links)}] 正在下载视频: {info['视频标题']}...")
+            download_one((info, collection_dir))
+        else:
+            print(f"[{idx}/{len(video_links)}] 解析详情失败，跳过下载。")
+            if local_cover_path and os.path.exists(local_cover_path):
+                try:
+                    os.remove(local_cover_path)
+                except Exception:
+                    pass
+
+    return videos_data
+
+
 def get_video_info(video_url):
+    """
+    使用 yt-dlp 从 Patreon 帖子详情页解析视频元数据，不触发实际下载。
+
+    参数：
+      video_url: 帖子详情页 URL（如 https://www.patreon.com/posts/xxxxxx）
+
+    返回包含以下字段的字典，失败时返回 None：
+      - '视频标题'      : 视频标题
+      - '清晰度'        : 分辨率字符串，如 "1920x1080" 或 "1080p"
+      - '总码率'        : 综合码率字符串，如 "5000 kbps"
+      - '视频详情链接'  : 原始帖子 URL（即传入的 video_url）
+      - '视频下载的链接': yt-dlp 解析出的带鉴权 token 的 CDN 直链（有时效性）
+
+    Cookie 优先读取 cookies.txt，否则从本地 Chrome 浏览器读取。
+    """
     ydl_opts = {
         'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best',
         'quiet': True,
@@ -96,10 +263,9 @@ def main():
     cover_only = False
     collection_url = ""
     for arg in sys.argv[1:]:
-        if arg.startswith("--auto-download="):
-            if arg.split("=")[1].lower() == "true":
-                auto_download = True
-        elif arg == "--cover-only":
+        if "--auto-download" in arg:
+            auto_download = True
+        elif "--cover-only" in arg:
             cover_only = True
             auto_download = True  # 有 --cover-only 时自动下载
         elif not arg.startswith("--") and not collection_url:
@@ -115,7 +281,7 @@ def main():
     base_download_dir = os.path.join(os.getcwd(), "download")
     
     print("正在启动浏览器并打开合集页面...")
-    co = ChromiumOptions().headless()
+    co = ChromiumOptions()  # 非无头模式，避免 Patreon 检测到机器人而拒绝渲染页面
     page = ChromiumPage(addr_or_opts=co)
     page.get(collection_url)
     
@@ -123,10 +289,11 @@ def main():
     # 1. 找到'<div elementtiming="Collection : Cover" data-is-key-element="true">Moe</div>'
     name_ele = page.ele('@elementtiming=Collection : Cover', timeout=15)
     if not name_ele:
-        print("未找到合集名称，网络较慢或页面结构发生变化。将使用默认名称。")
-        collection_name = "Unknown_Collection"
+        print("未找到合集名称，网络较慢或页面结构发生变化。")
+        # collection_name = "Unknown_Collection"
+        return
     else:
-        collection_name = name_ele.text.strip()
+        collection_name = name_ele.text.strip().replace(" ", "").replace("/", "_")
         print(f"找到合集名: {collection_name}")
         
     # 2. 在 @[d:\YouTube\petroen\download] 目录下，新建合集目录
@@ -181,113 +348,7 @@ def main():
         print(f"初始化 Markdown 文件失败: {e}\n")
 
     # 6. 逐个获取视频详情、封面图片并下载
-    videos_data = []
-    print(f"\n开始逐个获取信息并下载 (共 {len(video_links)} 个视频)...")
-    for idx, item in enumerate(video_links, 1):
-        link = item['url']
-        print(f"\n--------------------------------------------------")
-        
-        # 打开详情页获取封面
-        cover_url = ""
-        try:
-            print(f"[{idx}/{len(video_links)}] 正在获取详情页封面: {link}")
-            page.get(link)
-            # 给页面足够的时间去渲染
-            # page.wait.ele_displayed('tag:img', timeout=10)
-            
-            # 首先尝试查找指定的封面容器 kpWLcK
-            cover_div = page.ele('.kpWLcK', timeout=2)
-            if cover_div:
-                img_ele = cover_div.ele('tag:img', timeout=1)
-                if img_ele:
-                    cover_url = img_ele.attr('src')
-            
-            # 如果没找到，尝试通过 patreon-media/p/post 的图片特征寻找
-            if not cover_url:
-                imgs = page.eles('tag:img')
-                for img in imgs:
-                    src = img.attr('src')
-                    if src and '/patreon-media/p/post/' in src:
-                        cover_url = src
-                        break
-        except Exception as e:
-            print(f"获取详情页封面失败: {e}")
-            
-        item['cover'] = cover_url
-        
-        # 下载封面图片
-        local_cover_path = ""
-        cover_filename = ""
-        if cover_url:
-            try:
-                print(f"[{idx}/{len(video_links)}] 正在下载封面...")
-                cover_ext = cover_url.split('?')[0].split('.')[-1]
-                if len(cover_ext) > 4 or not cover_ext: 
-                    cover_ext = "jpg"
-                
-                # 如果是 cover_only 模式，我们直接拿链接的最后一段作名字，或者用 idx
-                if cover_only:
-                    cover_filename = f"cover_{idx}.{cover_ext}"
-                else:
-                    cover_filename = f"temp_cover_{idx}.{cover_ext}"
-                    
-                local_cover_path = os.path.join(collection_dir, cover_filename)
-                r = requests.get(cover_url, timeout=10)
-                if r.status_code == 200:
-                    with open(local_cover_path, 'wb') as f:
-                        f.write(r.content)
-            except Exception as e:
-                print(f"[{idx}/{len(video_links)}] 下载封面失败: {e}")
-                local_cover_path = ""
-                
-        if cover_only:
-            # 仅下载封面模式
-            cover_md = f"<img src='{cover_url}' width='200'>" if cover_url else "无封面"
-            row_str = f"| (未解析) | {cover_md} | - | - | {link} | - |\n"
-            try:
-                with open(md_file_path, "a", encoding="utf-8") as f:
-                    f.write(row_str)
-            except Exception as e:
-                pass # 忽略追加错误
-            continue
-            
-        print(f"[{idx}/{len(video_links)}] 正在解析视频详情: {link}")
-        info = get_video_info(link)
-        if info:
-            info['封面链接'] = cover_url
-            videos_data.append(info)
-            
-            # 拿到视频标题后，将临时封面文件重命名为正式的文件名
-            if local_cover_path and os.path.exists(local_cover_path):
-                cover_filename = f"{sanitize_filename(info['视频标题'])}_cover.{cover_ext}"
-                final_cover_path = os.path.join(collection_dir, cover_filename)
-                try:
-                    if os.path.exists(final_cover_path):
-                        os.remove(final_cover_path)
-                    os.rename(local_cover_path, final_cover_path)
-                    local_cover_path = final_cover_path
-                except Exception as e:
-                    print(f"重命名封面文件失败: {e}")
-            
-            # 增量追加到 Markdown 文件
-            cover_md = f"<img src='{cover_url}' width='200'>" if cover_url else "无封面"
-            row_str = f"| {info['视频标题']} | {cover_md} | {info['清晰度']} | {info['总码率']} | {info['视频详情链接']} | {info['视频下载的链接']} |\n"
-            try:
-                with open(md_file_path, "a", encoding="utf-8") as f:
-                    f.write(row_str)
-            except Exception as e:
-                pass # 忽略追加错误
-            
-            print(f"[{idx}/{len(video_links)}] 正在下载视频: {info['视频标题']}...")
-            download_one((info, collection_dir))
-        else:
-            print(f"[{idx}/{len(video_links)}] 解析详情失败，跳过下载。")
-            # 如果解析失败，把临时封面文件删掉
-            if local_cover_path and os.path.exists(local_cover_path):
-                try:
-                    os.remove(local_cover_path)
-                except:
-                    pass
+    videos_data = process_all_videos(page, video_links, collection_dir, cover_only, md_file_path)
                     
     page.quit() # 所有任务完成后关闭浏览器
             
