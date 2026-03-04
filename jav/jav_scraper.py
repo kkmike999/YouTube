@@ -2,6 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import time
 import re
+import argparse
 
 def extract_code(line):
     # 提取番号，查找类似于 "字母-数字" 的模式
@@ -60,7 +61,8 @@ def get_best_magnet(soup):
         if not link_tag:
             continue
             
-        magnet_name = link_tag.get_text(strip=True)
+        # 只取第一个 <a> 的直接文本，不包含嵌套子元素（如「高清」标签）
+        magnet_name = ''.join(link_tag.find_all(string=True, recursive=False)).strip()
         magnet_link = link_tag.get('href', '')
         
         # 解析第二列：大小
@@ -94,6 +96,9 @@ def get_best_magnet(soup):
 
 def get_jav_info(code):
     url = f"https://www.javbus.com/{code}"
+
+    print(f"访问 {url} ...")
+
     # 伪装成浏览器
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
@@ -165,30 +170,46 @@ def get_jav_info(code):
 
 from tabulate import tabulate
 
+def parse_args():
+    parser = argparse.ArgumentParser(description='JAV 信息抓取工具')
+    parser.add_argument('--番号', nargs='*', help='番号列表，可指定多个。若指定则不从 content.txt 读取')
+    return parser.parse_args()
+
 def main():
-    print("开始获取数据...\n")
-    
-    try:
-        with open('content.txt', 'r', encoding='utf-8') as f:
-            lines = f.readlines()
-    except FileNotFoundError:
-        print("错误：未找到 content.txt 文件，请确保该文件在同一目录下。")
-        return
-    except Exception as e:
-        print(f"读取文件出错: {e}")
-        return
+    args = parse_args()
 
     codes = []
-    
-    # 提取番号
-    for line in lines:
-        code = extract_code(line)
-        if code:
-            codes.append(code)
-    
-    if not codes:
-        print("未在 content.txt 中提取到任何番号。")
-        return
+    if args.番号:
+        # 从命令行参数获取番号
+        for arg in args.番号:
+            code = extract_code(arg)
+            if code:
+                codes.append(code)
+        if not codes:
+            print("错误：未从 --番号 参数中提取到有效番号。")
+            return
+    else:
+        # 从 content.txt 读取
+        try:
+            with open('content.txt', 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+        except FileNotFoundError:
+            print("错误：未找到 content.txt 文件，请确保该文件在同一目录下。")
+            return
+        except Exception as e:
+            print(f"读取文件出错: {e}")
+            return
+
+        for line in lines:
+            code = extract_code(line)
+            if code:
+                codes.append(code)
+
+        if not codes:
+            print("未在 content.txt 中提取到任何番号。")
+            return
+
+    print("开始获取数据...\n")
 
     # 准备数据收集
     headers = ["番号", "标题", "链接", "磁力名稱", "檔案大小", "分享日期", "磁力链"]
