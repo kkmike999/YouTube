@@ -1,8 +1,10 @@
 import os
-import requests
-from bs4 import BeautifulSoup
 import re
 import sys
+from urllib.parse import urlencode, quote
+
+import requests
+from bs4 import BeautifulSoup
 
 def clean_cell_html(cell):
     # Decode contents, replace newlines with space, and escape | for markdown
@@ -45,8 +47,8 @@ def main():
 
     md_lines = []
     # 6. 生成新markdown表格：女友名、出道作品封面、作品海报、女优详情链接；
-    md_lines.append("| 女友名 | 出道作品封面 | 作品海报 | 女优详情链接 | javbus |")
-    md_lines.append("| --- | --- | --- | --- | --- |")
+    md_lines.append("| 女友名 | 出道作品封面 | 作品海报 | 女优详情链接 | javbus | missav | ")
+    md_lines.append("| --- | --- | --- | --- | --- | --- |")
     
     rows = table.find_all('tr')
     for row in rows:
@@ -75,7 +77,20 @@ def main():
             
         # Add to markdown
         javbus_link = f"https://www.javbus.com/search/{actress_name}"
-        md_lines.append(f"| {actress_name} | {cover_html} | {poster_html} | [seesaawiki]({actress_link}) | [javbus/{actress_name}]({javbus_link}) |")
+        missav_link = f"https://missav.ws/search/{actress_name}"
+        url_params = {
+            'aid': 1,
+            'cid': 428291345258651724,
+            'old_cid': 428291345258651724,
+            'old_cid_name': 'A______',
+            'search_value': actress_name,
+            'ct': 'file',
+            'ac': 'search',
+            'is_wl_tpl': 1,
+        }
+        # url_param_value = urlencode(url_params)
+        # _115_link = f"https://115.com/?submode=wangpan&mode=search&url={quote(url_param_value, safe='')}"
+        md_lines.append(f"| {actress_name} | {cover_html} | {poster_html} | [seesaawiki]({actress_link}) | [javbus]({javbus_link}) | [missav]({missav_link}) | ")
         
     out_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "temp")
     os.makedirs(out_dir, exist_ok=True)
