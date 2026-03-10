@@ -14,8 +14,12 @@ def clean_cell_html(cell):
 def main():
     if len(sys.argv) < 2:
         print("Usage: python seesaawiki_scraper.py <url>")
-        return
-    url = sys.argv[1]
+        url = input("请输入 URL: ").strip()
+        if not url:
+            print("未输入 URL，退出。")
+            return
+    else:
+        url = sys.argv[1]
     print(f"Fetching {url}")
     response = requests.get(url)
     response.encoding = 'euc-jp'
@@ -71,7 +75,7 @@ def main():
             
         # Add to markdown
         javbus_link = f"https://www.javbus.com/search/{actress_name}"
-        md_lines.append(f"| {actress_name} | {cover_html} | {poster_html} | {actress_link} | {javbus_link} |")
+        md_lines.append(f"| {actress_name} | {cover_html} | {poster_html} | [seesaawiki]({actress_link}) | [javbus/{actress_name}]({javbus_link}) |")
         
     out_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "temp")
     os.makedirs(out_dir, exist_ok=True)
