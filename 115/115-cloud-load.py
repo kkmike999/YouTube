@@ -221,9 +221,20 @@ def select_non_bangou_files(page, inner_list, bangou):
     selected_count = 0
     for li in lis:
         li_title = li.attr("title") or ""
-        if bangou.lower() in li_title.lower():
+        li_lower = li_title.lower()
+        bangou_lower = bangou.lower()
+
+        # 完整番号包含则跳过
+        if bangou_lower in li_lower:
             print(f"li_title={li_title} 包含番号 {bangou} 跳过")
             continue
+            
+        # 番号拆分为字母+数字，若目录名同时包含两者也跳过（如 FNS-141 -> fns 和 141）
+        parts = bangou.split('-')
+        if len(parts) >= 2 and parts[0].lower() in li_lower and parts[1] in li_lower:
+            print(f"li_title={li_title} 包含番号 {bangou} 的字母和数字部分 跳过")
+            continue
+
         print(f"li_title={li_title} 选中")
         li.run_js('this.className = "selected"')
         selected_count += 1
