@@ -10,3 +10,4 @@ __pycache__/
 patreon/download/
 youtube/download/
 temp
+ds_update.log
