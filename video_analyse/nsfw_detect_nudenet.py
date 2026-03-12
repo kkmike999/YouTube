@@ -1,31 +1,46 @@
 """
 涉黄检测脚本
 对 Capture 目录下所有截图逐一分析，输出风险等级和详情
+
+https://github.com/notAI-tech/NudeNet
 """
 
 import os
 import sys
 from pathlib import Path
+from nudenet import NudeDetector
 
 # ── 配置 ──────────────────────────────────────────────────────────────────────
 INPUT_DIR = r"d:\YouTube\video_analyse\temp\Capture"
 
-# 风险标签（NudeNet 检测类别）及对应中文名
+# 高风险标签：明显裸露内容
 RISKY_LABELS = {
     "FEMALE_GENITALIA_EXPOSED": "女性生殖器裸露",
     "MALE_GENITALIA_EXPOSED":   "男性生殖器裸露",
     "FEMALE_BREAST_EXPOSED":    "女性胸部裸露",
+    "MALE_BREAST_EXPOSED":      "男性胸部裸露",
     "BUTTOCKS_EXPOSED":         "臀部裸露",
     "ANUS_EXPOSED":             "肛门裸露",
-}
-
-MEDIUM_LABELS = {
-    "FEMALE_BREAST_COVERED":    "女性胸部遮挡",
-    "FEMALE_GENITALIA_COVERED": "女性生殖器遮挡",
-    "MALE_GENITALIA_COVERED":   "男性生殖器遮挡",
-    "BUTTOCKS_COVERED":         "臀部遮挡",
+    "FEET_EXPOSED":             "脚部裸露",
     "BELLY_EXPOSED":            "腹部裸露",
     "ARMPITS_EXPOSED":          "腋下裸露",
+}
+
+# 中风险标签：遮挡/覆盖状态
+MEDIUM_LABELS = {
+    "FEMALE_GENITALIA_COVERED": "女性生殖器遮挡",
+    "FEMALE_BREAST_COVERED":    "女性胸部遮挡",
+    "BUTTOCKS_COVERED":         "臀部遮挡",
+    "ANUS_COVERED":             "肛门遮挡",
+    "BELLY_COVERED":            "腹部遮挡",
+    "ARMPITS_COVERED":          "腋下遮挡",
+    "FEET_COVERED":             "脚部遮挡",
+}
+
+# 安全标签：人脸，不纳入风险计算
+SAFE_LABELS = {
+    "FACE_FEMALE": "女性面部",
+    "FACE_MALE":   "男性面部",
 }
 
 # 判定为高风险的置信度阈值
@@ -59,12 +74,6 @@ def classify_result(detections: list) -> tuple[str, list]:
 
 
 def main():
-    try:
-        from nudenet import NudeDetector
-    except ImportError:
-        print("未安装 nudenet，请先运行：pip install nudenet")
-        sys.exit(1)
-
     input_dir = Path(INPUT_DIR)
     if not input_dir.exists():
         print(f"目录不存在：{INPUT_DIR}")
@@ -91,6 +100,8 @@ def main():
     for i, img_path in enumerate(images, 1):
         try:
             detections = detector.detect(str(img_path))
+            for det in detections:
+                print(f"  [RAW] {det}")
             level, hits = classify_result(detections)
             stats[level] += 1
 
