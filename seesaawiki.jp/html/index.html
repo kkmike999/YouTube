@@ -184,7 +184,7 @@
 
             grid.innerHTML = data.map((actress, index) => `
                 <div class="actress-card" data-name="${actress.name.toLowerCase()}" style="animation-delay: ${index * 0.05}s">
-                    <div class="card-image-container" onclick="openModal(${index})">
+                    <div class="card-image-container" onclick="openModal(${index}, 0)">
                         <img class="card-image" src="${actress.cover}" alt="${actress.name}" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%231a1a24%22 width=%22100%22 height=%22100%22/><text x=%2250%22 y=%2255%22 text-anchor=%22middle%22 fill=%22%23606070%22 font-size=%2212%22>No Image</text></svg>'">
                         <div class="card-overlay">
                             <h3 class="actress-name">${actress.name}</h3>
@@ -193,7 +193,7 @@
                     ${actress.posters && actress.posters.length > 0 ? `
                         <div class="card-galleries">
                             ${actress.posters.slice(0, 3).map((poster, i) => `
-                                <img class="gallery-thumb" src="${poster}" alt="Gallery ${i + 1}" loading="lazy" onclick="event.stopPropagation(); openModal(${index})">
+                                <img class="gallery-thumb" src="${poster}" alt="Gallery ${i + 1}" loading="lazy" onclick="event.stopPropagation(); openModal(${index}, ${i + 1})">
                             `).join('')}
                         </div>
                     ` : ''}
@@ -216,12 +216,12 @@
         let currentActressIndex = 0;
         let currentImages = [];
 
-        function openModal(index) {
+        function openModal(index, imageIndex = 0) {
             const actress = actresses[index];
             if (!actress) return;
             currentActressIndex = index;
             currentImages = [actress.cover, ...(actress.posters || [])];
-            currentGalleryIndex = 0;
+            currentGalleryIndex = Math.min(Math.max(0, imageIndex), currentImages.length - 1);
 
             const modal = document.getElementById('modal');
             const modalBody = document.getElementById('modalBody');
@@ -230,7 +230,7 @@
                 <h2 class="modal-title">${actress.name}</h2>
                 <div class="gallery-container">
                     <div class="gallery-main">
-                        <img class="gallery-main-image" id="galleryMainImage" src="${currentImages[0]}" alt="${actress.name}">
+                        <img class="gallery-main-image" id="galleryMainImage" src="${currentImages[currentGalleryIndex]}" alt="${actress.name}">
                         ${currentImages.length > 1 ? `
                             <button class="gallery-nav prev" onclick="navigateGallery(-1)">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -242,13 +242,13 @@
                                     <polyline points="9 18 15 12 9 6"></polyline>
                                 </svg>
                             </button>
-                            <div class="gallery-counter"><span id="galleryCounter">1</span> / ${currentImages.length}</div>
+                            <div class="gallery-counter"><span id="galleryCounter">${currentGalleryIndex + 1}</span> / ${currentImages.length}</div>
                         ` : ''}
                     </div>
                     ${currentImages.length > 1 ? `
                         <div class="gallery-thumbnails">
                             ${currentImages.map((img, i) => `
-                                <img class="gallery-thumb ${i === 0 ? 'active' : ''}"
+                                <img class="gallery-thumb ${i === currentGalleryIndex ? 'active' : ''}"
                                      src="${img}"
                                      alt="Thumbnail ${i + 1}"
                                      onclick="switchGalleryImage(${i})"
