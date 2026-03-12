@@ -33,7 +33,7 @@ def main():
         user_input = input("请输入番号: ").strip()
         if user_input:
             # 支持一行输入多个番号（空格或逗号分隔）
-            codes = re.findall(r'[A-Za-z]+-\d+', user_input)
+            codes = re.findall(r'\d*[A-Za-z]+-\d+', user_input)
 
     if not codes:
         print("错误：未提取到有效番号。")

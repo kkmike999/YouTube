@@ -5,8 +5,8 @@ import re
 import argparse
 
 def extract_code(line):
-    # 提取番号，查找类似于 "字母-数字" 的模式
-    match = re.search(r'[A-Za-z]+-\d+', line)
+    # 提取番号，支持完整格式如 200GANA-3270、GANA-3270（可选前导数字 + 字母-数字）
+    match = re.search(r'\d*[A-Za-z]+-\d+', line)
     if match:
         return match.group(0)
     return None
