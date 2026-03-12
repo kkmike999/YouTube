@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新人女优 - 作品精选</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-icon">✦</div>
+                <div>
+                    <div class="logo-text" id="pageTitle">新人女优</div>
+                    <div class="logo-subtitle">作品精选</div>
+                </div>
+            </div>
+
+            <div class="search-container">
+                <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <path d="m21 21-4.35-4.35"></path>
+                </svg>
+                <input type="text" class="search-input" id="searchInput" placeholder="女优名検索...">
+            </div>
+
+            <div class="header-stats">
+                <div class="stat-item">
+                    <div class="stat-number" id="totalCount">0</div>
+                    <div class="stat-label">総計</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="section-header">
+            <h1 class="section-title">女优一覧</h1>
+            <div class="results-count" id="resultsCount">Loading...</div>
+        </div>
+
+        <div class="actress-grid" id="actressGrid">
+            <div class="loading">
+                <div class="loading-spinner"></div>
+                <p class="results-count">Markdown を読み込み中...</p>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>© 2025 AV Archive. All data from <a href="https://seesaawiki.jp" target="_blank">seesaawiki</a></p>
+    </footer>
+
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 6 6 18M6 6l12 12"></path>
+                </svg>
+            </button>
+            <div class="modal-body" id="modalBody"></div>
+        </div>
+    </div>
+
+    <script>
+        // 从 URL 参数获取 md 路径，支持相对路径或完整 URL
+        // 例: index.html?md=../md/2025_12.md
+        // 例: index.html?md=https://raw.githubusercontent.com/kkmike999/YouTube/main/seesaawiki.jp/md/2025_12.md
+        // 若传入 GitHub blob 链接，会自动转为 raw 链接
+        function getMdPath() {
+            const params = new URLSearchParams(window.location.search);
+            let path = params.get('md') || params.get('path');
+            console.log("path:", path);
+
+            if (!path) return path;
+
+            // GitHub blob -> raw 自动转换
+            const blobMatch = path.match(/github\.com\/([^/]+\/[^/]+)\/blob\/([^/]+)\/(.+)/);
+            if (blobMatch) {
+                path = `https://raw.githubusercontent.com/${blobMatch[1]}/${blobMatch[2]}/${blobMatch[3]}`;
+                console.log("-> path:", path);
+            }
+            return path;
+        }
+
+        // 从 markdown 表格解析数据
+        function parseMarkdownTable(mdText) {
+            const lines = mdText.trim().split('\n').filter(line => line.trim());
+            if (lines.length < 3) return [];
+
+            const actresses = [];
+            const separatorLine = lines[1];
+            if (!/^\|[\s\-:|]+\|/.test(separatorLine)) return [];
+
+            for (let i = 2; i < lines.length; i++) {
+                const cells = lines[i].split('|').map(c => c.trim()).filter((_, idx, arr) => idx > 0 && idx < arr.length - 1);
+                if (cells.length < 6) continue;
+
+                const name = cells[0].trim();
+                const coverHtml = cells[1] || '';
+                const postersHtml = cells[2] || '';
+                const seesaawikiCell = cells[3] || '';
+                const javbusCell = cells[4] || '';
+                const missavCell = cells[5] || '';
+
+                const extractImgSrcs = (html) => {
+                    const matches = html.matchAll(/src="([^"]+)"/g);
+                    return Array.from(matches).map(m => m[1]);
+                };
+
+                const extractMarkdownUrl = (text, linkText) => {
+                    const regex = new RegExp(`\\[${linkText}\\]\\((https?:\\/\\/[^)]+)\\)`, 'i');
+                    const m = text.match(regex);
+                    return m ? m[1] : '';
+                };
+
+                const coverImgs = extractImgSrcs(coverHtml);
+                const posterImgs = extractImgSrcs(postersHtml);
+                const cover = coverImgs[0] || '';
+                const posters = posterImgs;
+
+                const seesaawiki = extractMarkdownUrl(seesaawikiCell, 'seesaawiki') || 
+                    (seesaawikiCell.match(/\[([^\]]+)\]\((https?:[^)]+)\)/) || [])[2] || '';
+                const javbus = extractMarkdownUrl(javbusCell, 'javbus') || '';
+                const missav = extractMarkdownUrl(missavCell, 'missav') || '';
+
+                if (name && cover) {
+                    actresses.push({
+                        name,
+                        cover,
+                        posters: posters || [],
+                        seesaawiki: seesaawiki || `https://www.javbus.com/search/${encodeURIComponent(name)}`,
+                        javbus: javbus || `https://www.javbus.com/search/${encodeURIComponent(name)}`,
+                        missav: missav || `https://missav.ws/search/${encodeURIComponent(name)}`
+                    });
+                }
+            }
+            return actresses;
+        }
+
+        // 从文件名推导标题，如 2025_12.md -> 2025年12月
+        function deriveTitleFromPath(path) {
+            const newFormat = path.match(/(\d{4})_(\d{1,2})/);
+            if (newFormat) return `${newFormat[1]}年${parseInt(newFormat[2], 10)}月`;
+            const yearMatch = path.match(/(\d{4})/);
+            if (!yearMatch) return '新人女优';
+            const year = yearMatch[1];
+            const fwMap = { '１': '1', '２': '2', '３': '3', '４': '4', '５': '5', '６': '6', '７': '7', '８': '8', '９': '9', '１０': '10', '１１': '11', '１２': '12' };
+            const monthMatch = path.match(/([１２]\d?|１\d|1[012]|\d{1,2})月?/);
+            if (monthMatch) {
+                let m = monthMatch[1];
+                if (fwMap[m]) return `${year}年${fwMap[m]}月`;
+                if (/^\d+$/.test(m)) return `${year}年${parseInt(m, 10)}月`;
+            }
+            return `${year}年`;
+        }
+
+        let actresses = [];
+
+        function renderActresses(data) {
+            const grid = document.getElementById('actressGrid');
+            const totalCount = document.getElementById('totalCount');
+            const resultsCount = document.getElementById('resultsCount');
+
+            totalCount.textContent = data.length;
+            resultsCount.textContent = `${data.length}件の結果`;
+
+            if (data.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <path d="m21 21-4.35-4.35"></path>
+                        </svg>
+                        <p>検索結果がありません</p>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = data.map((actress, index) => `
+                <div class="actress-card" data-name="${actress.name.toLowerCase()}" style="animation-delay: ${index * 0.05}s">
+                    <div class="card-image-container" onclick="openModal(${index})">
+                        <img class="card-image" src="${actress.cover}" alt="${actress.name}" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%231a1a24%22 width=%22100%22 height=%22100%22/><text x=%2250%22 y=%2255%22 text-anchor=%22middle%22 fill=%22%23606070%22 font-size=%2212%22>No Image</text></svg>'">
+                        <div class="card-overlay">
+                            <h3 class="actress-name">${actress.name}</h3>
+                        </div>
+                    </div>
+                    ${actress.posters && actress.posters.length > 0 ? `
+                        <div class="card-galleries">
+                            ${actress.posters.slice(0, 3).map((poster, i) => `
+                                <img class="gallery-thumb" src="${poster}" alt="Gallery ${i + 1}" loading="lazy" onclick="event.stopPropagation(); openModal(${index})">
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                    <div class="card-actions">
+                        <a class="action-btn action-btn-primary" href="${actress.seesaawiki}" target="_blank">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v4"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                            </svg>
+                            詳細
+                        </a>
+                        <a class="action-btn action-btn-secondary" href="${actress.javbus}" target="_blank">JavBus</a>
+                        <a class="action-btn action-btn-secondary" href="${actress.missav}" target="_blank">MissAV</a>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        let currentGalleryIndex = 0;
+        let currentActressIndex = 0;
+        let currentImages = [];
+
+        function openModal(index) {
+            const actress = actresses[index];
+            if (!actress) return;
+            currentActressIndex = index;
+            currentImages = [actress.cover, ...(actress.posters || [])];
+            currentGalleryIndex = 0;
+
+            const modal = document.getElementById('modal');
+            const modalBody = document.getElementById('modalBody');
+
+            modalBody.innerHTML = `
+                <h2 class="modal-title">${actress.name}</h2>
+                <div class="gallery-container">
+                    <div class="gallery-main">
+                        <img class="gallery-main-image" id="galleryMainImage" src="${currentImages[0]}" alt="${actress.name}">
+                        ${currentImages.length > 1 ? `
+                            <button class="gallery-nav prev" onclick="navigateGallery(-1)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="15 18 9 12 15 6"></polyline>
+                                </svg>
+                            </button>
+                            <button class="gallery-nav next" onclick="navigateGallery(1)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="9 18 15 12 9 6"></polyline>
+                                </svg>
+                            </button>
+                            <div class="gallery-counter"><span id="galleryCounter">1</span> / ${currentImages.length}</div>
+                        ` : ''}
+                    </div>
+                    ${currentImages.length > 1 ? `
+                        <div class="gallery-thumbnails">
+                            ${currentImages.map((img, i) => `
+                                <img class="gallery-thumb ${i === 0 ? 'active' : ''}"
+                                     src="${img}"
+                                     alt="Thumbnail ${i + 1}"
+                                     onclick="switchGalleryImage(${i})"
+                                     loading="lazy">
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                </div>
+                <div class="modal-links">
+                    <a class="action-btn action-btn-primary" href="${actress.seesaawiki}" target="_blank">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v4"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                        </svg>
+                        seesaawikiで詳細を見る
+                    </a>
+                    <a class="action-btn action-btn-secondary" href="${actress.javbus}" target="_blank">JavBus</a>
+                    <a class="action-btn action-btn-secondary" href="${actress.missav}" target="_blank">MissAV</a>
+                </div>
+            `;
+
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+            document.addEventListener('keydown', handleModalKeydown);
+        }
+
+        function navigateGallery(direction) {
+            currentGalleryIndex += direction;
+            if (currentGalleryIndex < 0) currentGalleryIndex = currentImages.length - 1;
+            else if (currentGalleryIndex >= currentImages.length) currentGalleryIndex = 0;
+            updateGalleryImage();
+        }
+
+        function switchGalleryImage(index) {
+            currentGalleryIndex = index;
+            updateGalleryImage();
+        }
+
+        function updateGalleryImage() {
+            const mainImage = document.getElementById('galleryMainImage');
+            const counter = document.getElementById('galleryCounter');
+            const thumbs = document.querySelectorAll('.gallery-thumbnails .gallery-thumb');
+            if (mainImage) {
+                mainImage.style.opacity = '0';
+                setTimeout(() => {
+                    mainImage.src = currentImages[currentGalleryIndex];
+                    mainImage.style.opacity = '1';
+                }, 150);
+            }
+            if (counter) counter.textContent = currentGalleryIndex + 1;
+            thumbs.forEach((thumb, i) => thumb.classList.toggle('active', i === currentGalleryIndex));
+        }
+
+        function handleModalKeydown(e) {
+            if (e.key === 'ArrowLeft') navigateGallery(-1);
+            else if (e.key === 'ArrowRight') navigateGallery(1);
+            else if (e.key === 'Escape') closeModal();
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+            document.body.style.overflow = '';
+            document.removeEventListener('keydown', handleModalKeydown);
+        }
+
+        document.getElementById('modal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        const searchInput = document.getElementById('searchInput');
+        searchInput.addEventListener('input', function(e) {
+            const query = e.target.value.toLowerCase().trim();
+            if (query === '') {
+                renderActresses(actresses);
+                return;
+            }
+            const filtered = actresses.filter(a => a.name.toLowerCase().includes(query));
+            renderActresses(filtered);
+        });
+
+        async function loadMarkdown() {
+            const mdPath = getMdPath();
+            const pageTitle = document.getElementById('pageTitle');
+            pageTitle.textContent = deriveTitleFromPath(mdPath);
+
+            try {
+                const res = await fetch(mdPath);
+                if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+                const text = await res.text();
+                actresses = parseMarkdownTable(text);
+                renderActresses(actresses);
+                document.title = `${pageTitle.textContent} - 新人女优作品精选`;
+            } catch (err) {
+                document.getElementById('actressGrid').innerHTML = `
+                    <div class="error-state">
+                        <p>Markdown ファイルの読み込みに失敗しました</p>
+                        <p><code>${mdPath}</code></p>
+                        <p style="font-size:0.85rem;color:var(--text-muted);">使用例: <code>index.html?md=../md/2025_12.md</code> 或 <code>index.html?md=https://raw.githubusercontent.com/.../2025_12.md</code></p>
+                        <p style="font-size:0.8rem;color:var(--text-muted);">※ ローカルで開く場合は HTTP サーバーが必要です (例: npx serve .)</p>
+                    </div>
+                `;
+                document.getElementById('resultsCount').textContent = 'エラー';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadMarkdown);
+    </script>
+</body>
+</html>
