@@ -77,7 +77,7 @@ def main():
             
         # Add to markdown
         javbus_link = f"https://www.javbus.com/search/{actress_name}"
-        missav_link = f"https://missav.ws/search/{actress_name}"
+        missav_link = f"https://missav.ai/search/{actress_name}"
         url_params = {
             'aid': 1,
             'cid': 428291345258651724,
