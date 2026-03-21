@@ -2,17 +2,29 @@ import yt_dlp
 import sys
 import os
 
+# 修复 Windows 下视频标题含 emoji 时的 GBK 编码错误
+if sys.stdout.encoding and sys.stdout.encoding.lower() != 'utf-8':
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
+
 def download_video(video_url):
     download_dir = "download"
     if not os.path.exists(download_dir):
         os.makedirs(download_dir)
 
+    # cookies 文件路径（与脚本同目录）
+    cookies_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'youtube_cookies.txt')
+
     # 修改 format 为 bestvideo+bestaudio/best 以下载最高画质和音质
     # 如果系统没有安装 ffmpeg，bestvideo+bestaudio 会失败并回退到 best (最高画质但可能只有720p带音频的单文件)
     ydl_opts = {
         'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best',
+        #'format': 'bestvideo+bestaudio/best',
         'outtmpl': f'{download_dir}/%(title)s.%(ext)s',
         'merge_output_format': 'mp4', # 尝试合并为mp4格式
+        'cookiefile': cookies_path,  # 使用 cookies 以支持年龄限制/会员视频等
     }
     
     print(f"正在获取视频信息: {video_url} ...")
