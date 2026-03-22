@@ -1,7 +1,7 @@
 biliup upload \
   "D:\YouTube\bilibili\temp\【ASMR】眼精疲労  疲れ目マッサージ (ホットストーン・銀コロ・リファを使って) 00_00_00-00_01_03.mp4" \
   --cover "D:\YouTube\bilibili\temp\【ASMR】眼精疲労  疲れ目マッサージ (ホットストーン・銀コロ・リファを使って).jpg" \
-  --title "【ASMR】眼精疲労  疲れ目マッサージ (ホットストーン・銀コロ・リファを使って)" \
+  --title "眼精疲労  疲れ目マッサージ (ホットストーン・銀コロ・リファを使って)" \
   --copyright 2 \
   --source "https://www.youtube.com/@TOKYOASMRMASSAGE" \
   --tid 21 \
