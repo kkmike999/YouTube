@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 import sys
 import time
 import argparse
@@ -7,11 +8,41 @@ import urllib.parse
 from pathlib import Path
 
 try:
-    from DrissionPage import ChromiumPage
+    from DrissionPage import ChromiumPage, ChromiumOptions
     from DrissionPage.common import Settings
 except ImportError:
     print("错误: 未安装 DrissionPage。请先在终端中运行 'pip install DrissionPage'")
     sys.exit(1)
+
+
+def make_chromium_options():
+    """
+    使用随机空闲调试端口 + 独立用户数据目录，避免固定 9222 被占用或与日常 Chrome 配置冲突导致连接失败。
+    可通过环境变量指定浏览器：CHROME_PATH、EDGE_PATH 或 BROWSER_PATH（指向 chrome.exe / msedge.exe）。
+    """
+    co = ChromiumOptions()
+    script_dir = Path(__file__).resolve().parent
+    co.set_tmp_path(str(script_dir / ".drission_tmp"))
+    co.auto_port(True)
+
+    for key in ("CHROME_PATH", "EDGE_PATH", "BROWSER_PATH"):
+        p = (os.environ.get(key) or "").strip().strip('"')
+        if p and os.path.isfile(p):
+            co.set_browser_path(p)
+            return co
+
+    bp = (co.browser_path or "").strip()
+    if bp and os.path.isfile(bp):
+        return co
+
+    for exe in ("chrome.exe", "msedge.exe", "chrome", "msedge"):
+        found = shutil.which(exe)
+        if found:
+            co.set_browser_path(found)
+            break
+
+    return co
+
 
 # 读取 jav/temp/${番号}.md
 def read_bangou_row(bangou, cloud_load_url=None):
@@ -415,9 +446,14 @@ def check_115_login_with_dp(cookie_file, cloud_load_url=None, bangou=None, row_d
 
     print("正在启动 Chromium... (请保持关注弹出的浏览器窗口)")
     try:
-        page = ChromiumPage()
+        Settings.set_browser_connect_timeout(45)
+        page = ChromiumPage(make_chromium_options())
     except Exception as e:
         print(f"启动浏览器失败: {e}")
+        print(
+            "若仍失败：1) 关闭其它占用调试端口的 Chrome；2) 设置环境变量 CHROME_PATH 或 EDGE_PATH 为浏览器完整路径；"
+            "3) 确认已安装 Chrome 或 Edge。"
+        )
         return
 
     try:
