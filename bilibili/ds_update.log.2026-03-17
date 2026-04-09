@@ -1,0 +1,30 @@
+2026-03-22 21:44:16,529 __init__.py[line:13](Pid:3248 Tname:MainThread) ERROR Uncaught exception:
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "D:\YouTube\.venv\Scripts\biliup.exe\__main__.py", line 5, in <module>
+    sys.exit(arg_parser())
+             ~~~~~~~~~~^^
+  File "d:\YouTube\.venv\Lib\site-packages\biliup\__main__.py", line 21, in arg_parser
+    asyncio.run(main())
+    ~~~~~~~~~~~^^^^^^^^
+  File "C:\Users\29806\AppData\Local\Programs\Python\Python314\Lib\asyncio\runners.py", line 204, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "C:\Users\29806\AppData\Local\Programs\Python\Python314\Lib\asyncio\runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Users\29806\AppData\Local\Programs\Python\Python314\Lib\asyncio\base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "d:\YouTube\.venv\Lib\site-packages\biliup\__main__.py", line 33, in main
+    await loop.run_in_executor(None, stream_gears.main_loop)
+  File "C:\Users\29806\AppData\Local\Programs\Python\Python314\Lib\concurrent\futures\thread.py", line 86, in run
+    result = ctx.run(self.task)
+  File "C:\Users\29806\AppData\Local\Programs\Python\Python314\Lib\concurrent\futures\thread.py", line 73, in run
+    return fn(*args, **kwargs)
+RuntimeError: [1mUnknown Error[22m
+├╴at [3mD:\a\biliup\biliup\crates\biliup-cli\src\uploader.rs:158:14[23m
+│
+╰─▶ [1mResponseData { code: 21173, data: None, message: "发布时间离当前时间必须≥5分钟且≤15天，请重新选择", ttl: Some(1) }[22m
+    ╰╴at [3mD:\a\biliup\biliup\crates\biliup-cli\src\uploader.rs:158:14[23m
