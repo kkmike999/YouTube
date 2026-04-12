@@ -1,6 +1,8 @@
 import yt_dlp
 import sys
 import os
+import tkinter as tk
+from tkinter import filedialog
 
 # 修复 Windows 下视频标题含 emoji 时的 GBK 编码错误
 if sys.stdout.encoding and sys.stdout.encoding.lower() != 'utf-8':
@@ -10,7 +12,7 @@ if sys.stdout.encoding and sys.stdout.encoding.lower() != 'utf-8':
         pass
 
 def download_video(video_url):
-    download_dir = "download"
+    download_dir = choose_download_dir("download")
     if not os.path.exists(download_dir):
         os.makedirs(download_dir)
 
@@ -118,6 +120,23 @@ def download_video(video_url):
         print("\n\n已取消下载。")
     except Exception as e:
         print(f"\n错误: {e}")
+
+def choose_download_dir(default_dir):
+    if os.name != 'nt':
+        return default_dir
+
+    try:
+        root = tk.Tk()
+        root.withdraw()
+        root.attributes('-topmost', True)
+        selected_dir = filedialog.askdirectory(
+            title="选择视频下载目录",
+            initialdir=os.path.abspath(default_dir)
+        )
+        root.destroy()
+        return selected_dir or default_dir
+    except Exception:
+        return default_dir
 
 if __name__ == "__main__":
     # 如果通过命令行参数提供了URL，则使用该参数，否则提示用户输入
