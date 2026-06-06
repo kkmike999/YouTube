@@ -13,3 +13,5 @@ temp
 ds_update.log
 .drission_tmp/
 *.log
+cookies
+node_modules/

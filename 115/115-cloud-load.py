@@ -478,14 +478,14 @@ def check_115_login_with_dp(cookie_file, cloud_load_url=None, bangou=None, row_d
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="115 Cloud Load Script")
-    # 兼容之前的文件参数，默认为 d:\YouTube\115\cookies_115.json
+    # 兼容之前的文件参数，默认为 d:\YouTube\115\cookies\cookies_115.json
     parser.add_argument("cookie_file", nargs='?', default=None, help="Path to cookie file")
     # 新增 --cloud-load 选项用于接收链接
     parser.add_argument("--cloud-load", dest="cloud_load_url", help="离线下载链接")
     parser.add_argument("--番号", dest="bangou", help="番号")
     
     args = parser.parse_args()
-    default_cookie = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cookies_115.json")
+    default_cookie = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cookies/cookies_115.json")
     
     # 如果一个参数都没输入，则逐个提示用户输入（可直接回车跳过）
     if len(sys.argv) == 1:

@@ -19,6 +19,6 @@ for code in "${codes[@]}"; do
   [ -z "$code" ] && continue
 
   echo ">>> 处理番号: $code"
-  python ../jav/jav_magnet.py --番号 "$code"
-  python ../115/115-cloud-load.py --番号 "$code"
+  python jav/jav_magnet.py --番号 "$code"
+  python 115/115-cloud-load.py --番号 "$code"
 done
