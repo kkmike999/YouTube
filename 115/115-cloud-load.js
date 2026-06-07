@@ -201,7 +201,7 @@ async function readBangouRow(bangou, cloudLoadUrl, prompt) {
   let markdownPath = findMarkdownPath(bangou);
   if (!fs.existsSync(markdownPath)) {
     console.error(
-      `错误: 找不到文件 ${markdownPath}，请先运行 jav_magnet.py --番号 ${bangou} 生成该文件`,
+      `错误: 找不到文件 ${markdownPath}，请先运行 node jav/jav_magnet.js --番号 ${bangou} 生成该文件`,
     );
     const input = await prompt.ask('请重新输入番号（直接回车跳过）: ');
     if (input) {
