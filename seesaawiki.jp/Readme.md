@@ -1,6 +1,6 @@
-# seesaawiki_scraper.py 说明
+# seesaawiki_scraper.js 说明
 
-`seesaawiki_scraper.py` 用于抓取 SeesaaWiki 的月度页面，并自动生成对应的 Markdown 数据文件，同时更新月度索引 `monthly.json`。
+`seesaawiki_scraper.js` 用于抓取 SeesaaWiki 的月度页面，并自动生成对应的 Markdown 数据文件，同时更新月度索引 `monthly.json`。
 
 ## 脚本做了什么
 
@@ -33,18 +33,16 @@
 ## 运行方式
 
 ```bash
-python seesaawiki_scraper.py "<目标页面URL>"
+node seesaawiki_scraper.js "<目标页面URL>"
 ```
 
 或直接运行后手动输入 URL：
 
 ```bash
-python seesaawiki_scraper.py
+node seesaawiki_scraper.js
 ```
 
-## 依赖
+## 运行环境
 
-- `requests`
-- `beautifulsoup4`
-
-可通过项目内环境安装依赖后运行。
+- Node.js 18 或更高版本
+- 无第三方依赖
