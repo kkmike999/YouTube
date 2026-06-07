@@ -20,5 +20,5 @@ for code in "${codes[@]}"; do
 
   echo ">>> 处理番号: $code"
   python jav/jav_magnet.py --番号 "$code"
-  python 115/115-cloud-load.py --番号 "$code"
+  node 115/115-cloud-load.js --番号 "$code"
 done

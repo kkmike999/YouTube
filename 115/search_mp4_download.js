@@ -12,7 +12,7 @@ try {
 const START_URL = 'https://115.com/?cid=3374099409331158534';
 const PASTE_TARGET_CID = '3445595181372409406';
 const PASTE_TARGET_URL = `https://115.com/?cid=${PASTE_TARGET_CID}&offset=0&tab=&mode=wangpan`;
-const COOKIE_FILE = path.join(__dirname, 'cookies', '115_cookies_netscape.txt');
+const COOKIE_FILE = path.join(__dirname, 'cookies', 'cookies_115.json');
 const MAX_DEBUG_ITEMS = 80;
 
 function installClickListenerTracker(context) {
@@ -104,54 +104,51 @@ function getSearchKeyArgument(args = process.argv.slice(2)) {
   return argument === undefined ? undefined : argument.slice(prefix.length).trim();
 }
 
-function parseNetscapeCookies(cookieFile) {
+function loadCookiesFromFile(cookieFile) {
   if (!fs.existsSync(cookieFile)) {
-    throw new Error(`找不到 cookies 文件: ${cookieFile}`);
+    throw new Error(`找不到 Cookie 文件: ${cookieFile}`);
   }
 
-  const cookies = [];
-  const content = fs.readFileSync(cookieFile, 'utf8');
-
-  for (const rawLine of content.split(/\r?\n/)) {
-    let line = rawLine.trim();
-    if (!line || (line.startsWith('#') && !line.startsWith('#HttpOnly_'))) {
-      continue;
-    }
-
-    let httpOnly = false;
-    if (line.startsWith('#HttpOnly_')) {
-      httpOnly = true;
-      line = line.slice('#HttpOnly_'.length);
-    }
-
-    const parts = line.split('\t');
-    if (parts.length < 7) {
-      continue;
-    }
-
-    const [domain, , cookiePath, secure, expiresText, name, ...valueParts] = parts;
-    if (!domain || !name) {
-      continue;
-    }
-
-    const cookie = {
-      name,
-      value: valueParts.join('\t'),
-      domain,
-      path: cookiePath || '/',
-      secure: secure.toUpperCase() === 'TRUE',
-      httpOnly,
-    };
-
-    const expires = Number(expiresText);
-    if (Number.isFinite(expires) && expires > 0) {
-      cookie.expires = expires;
-    }
-
-    cookies.push(cookie);
+  let cookiesList;
+  try {
+    cookiesList = JSON.parse(fs.readFileSync(cookieFile, 'utf8'));
+  } catch (error) {
+    throw new Error(`读取或解析 Cookie JSON 文件失败: ${error.message}`);
   }
 
-  return cookies;
+  if (!Array.isArray(cookiesList)) {
+    throw new Error('读取或解析 Cookie JSON 文件失败: 顶层数据必须是数组');
+  }
+
+  return cookiesList
+    .filter((cookie) => cookie && 'name' in cookie && 'value' in cookie)
+    .map((cookie) => {
+      const playwrightCookie = {
+        name: String(cookie.name),
+        value: String(cookie.value),
+        domain: cookie.domain || '.115.com',
+        path: cookie.path || '/',
+        httpOnly: Boolean(cookie.httpOnly),
+        secure: Boolean(cookie.secure),
+      };
+
+      if (!cookie.session && Number.isFinite(cookie.expirationDate)) {
+        playwrightCookie.expires = cookie.expirationDate;
+      }
+
+      const sameSiteMap = {
+        strict: 'Strict',
+        lax: 'Lax',
+        none: 'None',
+        no_restriction: 'None',
+      };
+      const sameSite = sameSiteMap[String(cookie.sameSite || '').toLowerCase()];
+      if (sameSite) {
+        playwrightCookie.sameSite = sameSite;
+      }
+
+      return playwrightCookie;
+    });
 }
 
 async function showToast(page, message) {
@@ -664,7 +661,7 @@ async function main() {
 
   let browser;
   try {
-    const cookies = parseNetscapeCookies(COOKIE_FILE);
+    const cookies = loadCookiesFromFile(COOKIE_FILE);
     browser = await chromium.launch(getLaunchOptions());
     const context = await browser.newContext();
     await installClickListenerTracker(context);
