@@ -40,7 +40,7 @@ def get_best_magnet(soup):
     解析磁力表格并根据规则筛选最佳磁力链接
     规则：
     1. 磁力名称带有 '4K' 优先
-    2. 列表最后一项的磁力名称全大写，且第一列含有另一个“高清”链接
+    2. 列表由后往前遍历，第一个的第一列名称全大写，且第一列含有另一个“高清”链接
     3. 大小最大优先
 
     参考 https://www.javbus.com/START-517 (有4K),  https://www.javbus.com/NACT-138 (无4K)
@@ -101,10 +101,10 @@ def get_best_magnet(soup):
         # 如果有 4K，取 4K 中最大的
         return max(k4_magnets, key=lambda x: x['size_bytes'])
 
-    # 2. 列表最后一项通常是分享日期最早的条目
-    earliest_magnet = magnets[-1]
-    if earliest_magnet['name_is_upper'] and earliest_magnet['has_hd_link']:
-        return earliest_magnet
+    # 2. 由后往前查找第一个名称全大写且含有另一个“高清”链接的条目
+    for magnet in reversed(magnets):
+        if magnet['name_is_upper'] and magnet['has_hd_link']:
+            return magnet
 
     # 3. 否则取所有列表中最大的
     return max(magnets, key=lambda x: x['size_bytes'])
