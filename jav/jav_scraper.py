@@ -40,7 +40,10 @@ def get_best_magnet(soup):
     解析磁力表格并根据规则筛选最佳磁力链接
     规则：
     1. 磁力名称带有 '4K' 优先
-    2. 大小最大优先
+    2. 列表最后一项的磁力名称全大写，且第一列含有另一个“高清”链接
+    3. 大小最大优先
+
+    参考 https://www.javbus.com/START-517 (有4K),  https://www.javbus.com/NACT-138 (无4K)
     """
     magnet_table = soup.find('table', id='magnet-table')
     if not magnet_table:
@@ -57,13 +60,18 @@ def get_best_magnet(soup):
             
         # 解析第一列：磁力名称和链接
         name_col = cols[0]
-        link_tag = name_col.find('a')
+        link_tags = name_col.find_all('a')
+        link_tag = link_tags[0] if link_tags else None
         if not link_tag:
             continue
             
         # 只取第一个 <a> 的直接文本，不包含嵌套子元素（如「高清」标签）
         magnet_name = ''.join(link_tag.find_all(string=True, recursive=False)).strip()
         magnet_link = link_tag.get('href', '')
+        has_hd_link = any(
+            tag.get_text(strip=True) == '高清'
+            for tag in link_tags[1:]
+        )
         
         # 解析第二列：大小
         size_str = cols[1].get_text(strip=True)
@@ -77,7 +85,9 @@ def get_best_magnet(soup):
             'size_str': size_str,
             'size_bytes': size_bytes,
             'date': date_str,
-            'link': magnet_link
+            'link': magnet_link,
+            'name_is_upper': magnet_name.isupper(),
+            'has_hd_link': has_hd_link
         })
     
     if not magnets:
@@ -90,9 +100,14 @@ def get_best_magnet(soup):
     if k4_magnets:
         # 如果有 4K，取 4K 中最大的
         return max(k4_magnets, key=lambda x: x['size_bytes'])
-    else:
-        # 否则取所有列表中最大的
-        return max(magnets, key=lambda x: x['size_bytes'])
+
+    # 2. 列表最后一项通常是分享日期最早的条目
+    earliest_magnet = magnets[-1]
+    if earliest_magnet['name_is_upper'] and earliest_magnet['has_hd_link']:
+        return earliest_magnet
+
+    # 3. 否则取所有列表中最大的
+    return max(magnets, key=lambda x: x['size_bytes'])
 
 def get_jav_info(code):
     url = f"https://www.javbus.com/{code}"
