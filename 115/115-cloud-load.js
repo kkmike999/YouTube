@@ -734,8 +734,8 @@ async function check115Login(cookieFile, cloudLoadUrl, bangou, rowData) {
     console.error(`重命名过程出错: ${error.message}`);
   }
 
-  console.log('\n操作完毕。浏览器实例将在 10 秒后自动关闭。');
-  await sleep(10000);
+  console.log('\n操作完毕。浏览器实例将在 3 秒后自动关闭。');
+  await sleep(3000);
   await browser.close();
 }
 

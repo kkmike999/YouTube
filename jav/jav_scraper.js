@@ -289,20 +289,27 @@ function getBestMagnet(html) {
     return null;
   }
 
-  const fourKMagnets = magnets.filter((magnet) =>
+  // 排除磁力名称中带有 "-C" 的条目（通常为非正片内容）。
+  const filteredMagnets = magnets.filter(
+    (magnet) => !magnet.name.includes('-C '),
+  );
+
+  const candidates = filteredMagnets.length > 0 ? filteredMagnets : magnets;
+
+  const fourKMagnets = candidates.filter((magnet) =>
     magnet.name.toUpperCase().includes('4K'),
   );
   if (fourKMagnets.length > 0) {
     return maxBySize(fourKMagnets);
   }
 
-  for (let index = magnets.length - 1; index >= 0; index -= 1) {
-    if (magnets[index].nameIsUpper && magnets[index].hasHdLink) {
-      return magnets[index];
+  for (let index = candidates.length - 1; index >= 0; index -= 1) {
+    if (candidates[index].nameIsUpper && candidates[index].hasHdLink) {
+      return candidates[index];
     }
   }
 
-  return maxBySize(magnets);
+  return maxBySize(candidates);
 }
 
 /**
@@ -399,11 +406,8 @@ async function getJavInfo(code) {
 
     return { title, url, magnet };
   } catch (error) {
-    return {
-      title: `发生错误: ${error.message}`,
-      url,
-      magnet: null,
-    };
+    console.error(`获取 ${code} 信息时发生错误: ${error.message}`);
+    return null;
   }
 }
 

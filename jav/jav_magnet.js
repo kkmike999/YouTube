@@ -131,7 +131,15 @@ async function main() {
 
   // 按输入顺序逐个抓取，并把每个结果追加到同一张 Markdown 表格。
   for (const code of codes) {
-    const { title, magnet } = await getJavInfo(code);
+    const result = await getJavInfo(code);
+
+    if (result === null) {
+      console.log(`\n错误：获取 ${code} 信息失败，退出脚本。`);
+      process.exitCode = 1;
+      return;
+    }
+
+    const { title, magnet } = result;
 
     if (magnet) {
       lines.push(
