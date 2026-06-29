@@ -353,7 +353,7 @@ async function selectMatchedFiles(page, key) {
 
     for (const [index, li] of items.entries()) {
       const title = li.getAttribute('title');
-      const matched = titles.includes(title);
+      const matched = title !== null && titles.some((expectedTitle) => title.endsWith(expectedTitle));
       const checkbox = li.querySelector('input[type="checkbox"]');
       const text = (li.innerText || '').replace(/\s+/g, ' ').trim();
 
@@ -386,7 +386,9 @@ async function selectMatchedFiles(page, key) {
   for (let index = 0; index < result.totalCount; index += 1) {
     const li = resultItems.nth(index);
     const title = await li.getAttribute('title');
-    if (!expectedTitles.has(title)) {
+    const matched = title !== null
+      && expectedTitleList.some((expectedTitle) => title.endsWith(expectedTitle));
+    if (!matched) {
       continue;
     }
 
@@ -455,7 +457,10 @@ async function logMatchedItemClickListeners(searchFrame, expectedTitles) {
         : [];
 
       return items
-        .filter((li) => titles.includes(li.getAttribute('title')))
+        .filter((li) => {
+          const title = li.getAttribute('title');
+          return title !== null && titles.some((expectedTitle) => title.endsWith(expectedTitle));
+        })
         .map((li) => {
           const ancestors = [];
           for (let node = li; node; node = node.parentElement) {
