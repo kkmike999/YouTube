@@ -350,32 +350,20 @@ async function injectCookies(page, context, cookies) {
   await context.addCookies(cookies);
 }
 
-/** 访问 115 首页并根据页面特征判断当前登录状态。 */
-async function detectLoginStatus(page) {
-  const homeUrl = 'https://115.com/';
-  console.log(`正在访问 ${homeUrl} 进行状态检测...`);
-  await page.goto(homeUrl, { waitUntil: 'domcontentloaded' });
-  console.log('等待页面加载完成，进行状态检测...');
+/** 根据 Cookie 中是否存在非空 UID 判断当前登录状态。 */
+function detectLoginStatus(cookies) {
+  const uidCookie = cookies.find((cookie) => (
+    cookie.name === 'UID'
+      && typeof cookie.value === 'string'
+      && cookie.value.trim()
+  ));
 
-  if (await findLocatorInFrames(page, 'login-card', { timeout: 5000 })) {
-    console.log('【状态: 未登录】(检测到 <login-card> 登录组件框)');
-    return false;
-  }
-  if (await findLocatorInFrames(page, '.login-finished', { timeout: 2000 })) {
-    console.log('【状态: 已登录】(检测到传统的 login-finished 元素)');
-    return true;
-  }
-  if (
-    await findLocatorInFrames(page, 'div.user-info', { timeout: 2000 })
-    || await findLocatorInFrames(page, 'div#js_top_panel_box', { timeout: 2000 })
-  ) {
-    console.log('【状态: 已登录】(检测到用户个人信息面板区域)');
+  if (uidCookie) {
+    console.log('【状态: 已登录】(Cookie 中存在非空 UID)');
     return true;
   }
 
-  console.log(
-    '【状态: 未知】(页面未出现明显的登录框，但也未发现已登录的特征元素，请手动观察弹出的浏览器核实)',
-  );
+  console.log('【状态: 未登录】(Cookie 中未发现非空 UID)');
   return false;
 }
 
@@ -752,7 +740,7 @@ async function check115Login(cookieFile, cloudLoadUrl, bangou, rowData) {
 
   try {
     await injectCookies(page, context, cookies);
-    const isLoggedIn = await detectLoginStatus(page);
+    const isLoggedIn = detectLoginStatus(cookies);
     await gotoWangpan(page);
 
     if (isLoggedIn && cloudLoadUrl) {
