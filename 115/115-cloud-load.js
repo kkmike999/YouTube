@@ -277,6 +277,41 @@ function loadCookiesFromFile(cookieFile) {
     });
 }
 
+/** 将 Playwright Cookie 转回浏览器导出的 JSON Cookie 格式。 */
+function serializeCookiesForFile(cookies) {
+  return cookies.map((cookie) => {
+    const serialized = {
+      domain: cookie.domain || '.115.com',
+      hostOnly: !String(cookie.domain || '').startsWith('.'),
+      httpOnly: Boolean(cookie.httpOnly),
+      name: String(cookie.name),
+      path: cookie.path || '/',
+      sameSite: cookie.sameSite ? String(cookie.sameSite).toLowerCase() : 'unspecified',
+      secure: Boolean(cookie.secure),
+      session: !(Number.isFinite(cookie.expires) && cookie.expires > 0),
+      storeId: '0',
+      value: String(cookie.value),
+    };
+
+    if (!serialized.session) {
+      serialized.expirationDate = cookie.expires;
+    }
+
+    return serialized;
+  });
+}
+
+/** 读取浏览器上下文中的最新 Cookies，并覆盖写回 JSON Cookie 文件。 */
+async function saveContextCookies(context, cookieFile) {
+  const cookies = await context.cookies();
+  fs.writeFileSync(
+    cookieFile,
+    `${JSON.stringify(serializeCookiesForFile(cookies))}\n`,
+    'utf8',
+  );
+  console.log(`已更新 Cookies: ${cookieFile}`);
+}
+
 /** 在页面及其所有 iframe 中查找符合条件的元素。 */
 async function findLocatorInFrames(
   page,
@@ -736,6 +771,11 @@ async function check115Login(cookieFile, cloudLoadUrl, bangou, rowData) {
 
   console.log('\n操作完毕。浏览器实例将在 3 秒后自动关闭。');
   await sleep(3000);
+  try {
+    await saveContextCookies(context, cookieFile);
+  } catch (error) {
+    console.error(`更新 Cookies 失败: ${error.message}`);
+  }
   await browser.close();
 }
 
