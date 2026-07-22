@@ -3,7 +3,7 @@
  *
  * 功能：
  * 1. 从本机 115 HTTP API 获取 Cookie，并使用本机 Chrome/Edge 打开 115 网盘。
- * 2. 检测登录状态，将 magnet 链接添加为云下载任务。
+ * 2. 检测登录状态，通过本机 115 HTTP API 将 magnet 链接添加为云下载任务。
  * 3. 支持通过“番号”读取 ../jav/temp/<番号>.md 中的磁力链、磁力链目录名和标题。
  * 4. 下载任务创建后，将对应目录重命名为 Markdown 中的标题。
  * 5. 进入下载目录，删除文件名中不含完整番号或番号字母、数字部分的文件。
@@ -429,66 +429,19 @@ async function gotoWangpanByCid(page, cateId) {
   await page.goto(wangpanUrl, { waitUntil: 'domcontentloaded' });
 }
 
-/** 打开添加云下载窗口，提交磁力链接并刷新任务列表。 */
+/** 通过本机 115 HTTP API 提交磁力链接并刷新任务列表。 */
 async function addCloudTask(page, cloudLoadUrl) {
   if (!cloudLoadUrl) {
     return;
   }
 
-  console.log(`\n准备添加云下载任务: ${cloudLoadUrl}`);
-  await sleep(2000);
-
-  try {
-    const dropdown = await findLocatorInFrames(
-      page,
-      '.context-menu[data-dropdown-content="upload_btn_add_dir"]',
-      { timeout: 3000 },
-    );
-    if (dropdown) {
-      await dropdown.locator.evaluate((element) => {
-        element.style.display = 'block';
-      });
-    }
-  } catch (error) {
-    console.log(`显示菜单项失败 (可忽略): ${error.message}`);
-  }
-
-  const addButton = await findLocatorInFrames(
-    page,
-    'xpath=//a[@menu="offline_task" and .//i[contains(@class, "ifo-linktask")]]',
-    { timeout: 5000 },
+  console.log(`\n准备通过本机 API 添加云下载任务: ${cloudLoadUrl}`);
+  const response = await requestCookieApi(
+    'POST',
+    '/115/clouddownload/add_task_urls',
+    { url: [cloudLoadUrl] },
   );
-  if (!addButton) {
-    console.log('未找到【添加云下载】按钮');
-    return;
-  }
-
-  await addButton.locator.click({ force: true });
-  console.log('已点击【添加云下载】按钮');
-
-  const textarea = await findLocatorInFrames(page, '#js_offline_new_add', {
-    timeout: 5000,
-    visible: true,
-  });
-  if (!textarea) {
-    console.log('未找到链接输入框');
-    return;
-  }
-
-  await textarea.locator.fill(cloudLoadUrl);
-  console.log('已输入下载链接');
-
-  const startButton = await findLocatorInFrames(page, '[data-btn="start"]', {
-    timeout: 5000,
-    visible: true,
-  });
-  if (!startButton) {
-    console.log('未找到【开始下载】按钮');
-    return;
-  }
-
-  await startButton.locator.click();
-  console.log('已点击【开始下载】按钮');
+  console.log(`云下载接口响应: ${JSON.stringify(response)}`);
   console.log('等待 2 秒...');
   await sleep(2000);
   console.log('正在刷新界面...');
