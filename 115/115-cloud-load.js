@@ -470,52 +470,6 @@ async function getListItemByTitle(frame, titleText, timeout = 3000) {
   return null;
 }
 
-/** 右键点击列表项并打开重命名对话框。 */
-async function openRenameDialog(page, listItem) {
-  await listItem.click({ button: 'right' });
-  await sleep(500);
-
-  const renameItem = await findLocatorInFrames(
-    page,
-    'xpath=//li[@val="edit_name"]//a[.//span[text()="重命名"]]',
-    { timeout: 3000, visible: true },
-  );
-  if (!renameItem) {
-    console.log('未找到【重命名】菜单项');
-    return false;
-  }
-
-  await renameItem.locator.click();
-  await sleep(500);
-  return true;
-}
-
-/** 填写新名称并确认提交重命名操作。 */
-async function submitRename(page, newTitle) {
-  const input = await findLocatorInFrames(page, '[rel="txt"]', {
-    timeout: 3000,
-    visible: true,
-  });
-  if (!input) {
-    console.log('未找到重命名输入框');
-    return false;
-  }
-
-  await input.locator.fill(newTitle);
-  await sleep(300);
-
-  const confirmButton = await findLocatorInFrames(page, '[btn="confirm"]', {
-    timeout: 3000,
-    visible: true,
-  });
-  if (!confirmButton) {
-    return false;
-  }
-
-  await confirmButton.locator.click();
-  return true;
-}
-
 /** 收集目录内文件名不包含完整番号或其字母、数字部分的文件 ID。 */
 async function collectNonBangouFileIds(innerList, bangou) {
   const items = innerList.locator(':scope > li');
@@ -616,22 +570,39 @@ async function renameDirAndCleanup(page, rowData, bangou) {
     return;
   }
 
-  const cateId = await listItem.getAttribute('cate_id');
-  if (!(await openRenameDialog(page, listItem))) {
-    return;
-  }
-  if (!(await submitRename(page, title))) {
+  const fieldId = (await listItem.getAttribute('field_id') || '').trim();
+  const cateId = (await listItem.getAttribute('cate_id') || '').trim();
+  const fid = fieldId || cateId;
+  if (!fid) {
+    console.log(`title=${magnetDirName} 的列表项缺少 field_id 和 cate_id，跳过重命名`);
     return;
   }
 
-  console.log(`已重命名: ${magnetDirName} -> ${title}`);
+  const response = await requestCookieApi(
+    'POST',
+    '/115/rename',
+    { fid, new_name: title },
+  );
+  console.log(`重命名接口响应: ${JSON.stringify(response)}`);
+  console.log(`已通过 API 重命名: ${magnetDirName} -> ${title}`);
+  await page.reload({ waitUntil: 'domcontentloaded' });
   await sleep(1000);
 
   if (cateId) {
     await gotoWangpanByCid(page, cateId);
     await sleep(4000);
   } else {
-    await listItem.click();
+    const refreshedListContainer = await findLocatorInFrames(page, '.list-contents', {
+      timeout: 5000,
+    });
+    const renamedListItem = refreshedListContainer
+      ? await getListItemByTitle(refreshedListContainer.frame, title)
+      : null;
+    if (!renamedListItem) {
+      console.log(`刷新后未找到 title=${title} 的列表项，无法继续进入目录`);
+      return;
+    }
+    await renamedListItem.click();
     await sleep(4000);
   }
 
