@@ -1,0 +1,1952 @@
+<html class="layout-frame bd-core layout-allscreen">
+<head>
+
+    <meta charset="UTF-8">
+    <meta itemprop="name" content="115生活(曾用名“115网盘”)_数字生活平台">
+    <meta itemprop="image" content="web_icon.jpg">
+    <meta name="baidu_union_verify" content="52cba82272ca074f2ef94d55d9083884">
+    <title>文件_115生活(曾用名“115网盘”)_数字生活平台</title>
+    <script type="text/javascript">document.domain = "115.com";</script>
+    <script type="text/javascript">
+        // 移动设备访问兼容
+        if(location.href.indexOf('m=1') > -1 && !!ua.match(/iPhone|iPod|Android|Mobile/i)){
+            location.href = '//115.com/?ct=app&ac=file_list'
+        }
+
+        if (top != window) {
+            top.location.href = location.href;
+        }
+
+    </script>
+
+    <script src="//cdnassets.115.com/??libs/jquery-1.7.2.js,jquery-extend.js,libs/json2.js,oofUtil.js,paths.js,oofUtil/subscribe.js,commonFrame/urlMaintain.js,ajax/bridge.js?v=1783323668"
+            type="text/javascript"></script>
+    <script type="text/javascript">
+        //日程详情及日程添加编辑跳转
+        var start_time =  oofUtil.getQueryParamByKey('start_time');
+        var time =  oofUtil.getQueryParamByKey('time');
+        var aac =  oofUtil.getQueryParamByKey('aac');
+        var mode = oofUtil.getQueryParamByKey('mode');
+        var cal_id = oofUtil.getQueryParamByKey('cal_id');
+        var reverse = oofUtil.getQueryParamByKey('reverse');
+        if(aac=='add'){
+            window.location.href = '//life.115r.com/calendar/add?start_time='+start_time;
+        }else if(aac=='edit'){
+            window.location.href = '//life.115r.com/calendar/edit?time='+time+'&cal_id='+cal_id;
+        }else if(aac=='detail'){
+            window.location.href = '//life.115.com/C/'+cal_id+'/'+time +'?cal_id='+cal_id+'&reverse='+reverse;
+        }
+    </script>
+
+    <script type="text/javascript"
+            src="//cdnres.115.com/site/static/style_v9.1/js/viewport_manager.js?_vh=457a2bb_92"></script>
+    <link href="//cdnres.115.com/site/static/style_v11.2/common/css/common.css?_vh=107da41_92"
+          rel="stylesheet" type="text/css">
+    <link href="//cdnres.115.com/site/static/style_v11.2/common/css/dialog_box.css?_vh=f17e241_92"
+          rel="stylesheet" type="text/css">
+    <link href="//cdnres.115.com/site/static/style_v11.2/frame/css/frame.css?_vh=7673ac4_92"
+          rel="stylesheet" type="text/css">
+    <link href="//cdnres.115.com/site/static/style_v11.2/file/css/file.css?_vh=0f4c091_92"
+          rel="stylesheet" type="text/css">
+    <link href="//cdnres.115.com/site/static/style_v11.2/file/css/file_type.css?_vh=bf604a2_92"
+          rel="stylesheet" type="text/css">
+    <link href="//cdnres.115.com/site/static/style_v11.2/file/css/file_sharing_public.css?_vh=f898286_92"
+          rel="stylesheet" type="text/css">
+
+    <link rel="stylesheet" type="text/css"
+          href="//cdnassets.115.com/plug/timeSelector/theme-1/css/calender_widget.css?_v=1783323668">
+    <!-- <link href="//cdnres.115.com/site/static/style_v9.1/common/css/dialog_box.css" rel="stylesheet" type="text/css"/> -->
+    <link rel="stylesheet"
+          href="//cdnres.115.com/www/static/api/reward_dialog/v2/css/reward_dialog.css">
+
+    <script src="//cdnassets.115.com/??oofUtil/template.js,oofUtil/date.js?v=1783323668"
+            type="text/javascript"></script>
+    <script src="//cdnassets.115.com/plug/vcode_cn/verifyCode.js?v=1783323668"
+            type="text/javascript"></script>
+    <script type="text/javascript"
+            src="//cdnassets.115.com/??plug/timeSelector/timeSelector.js?v=1783323668"></script>
+    <script src="//cdnres.115.com/site/static/js/q/showDetailBox.js?_vh=2136de2_92"
+            type="text/javascript"></script>
+
+
+    <script type="text/javascript" src="//home.115.com/m_r/js/home.reddot.js?v=5"></script>
+    <script type="text/javascript"
+            src="//cdnres.115.com/site/static/js/min/util-min.js?_vh=be49060_92"></script>
+
+    <script type="text/javascript"
+            src="//cdnres.115.com/site/static/plug/guide_help/guide_help_new.js?_vh=f7b2777_92"></script>
+    <script type="text/javascript"
+            src="//cdnres.115.com/site/static/plug/frame/frame_api.js?_vh=5e6dbc9_92"></script>
+
+    <script type="text/javascript">
+
+        ;(function(){
+            var scripts = [];
+            if(!window.JSON){
+                scripts.push('//cdnassets.115.com/??libs/json2.js');
+            }
+            var html = []
+            for(var i= 0,c=scripts.length;i<c;i++){
+                html.push('<scr'+'ipt type="text/javascript" src="'+scripts[i]+'" ></scr'+'ipt>');
+            }
+            if(html.length){
+                document.write(html.join(''))
+            }
+        }());
+
+    </script>
+
+    <script type="text/javascript">
+        var CURR_TIME= new Date(1784746105000);
+        var DIFF_TIME= new Date(1784746105000)-new Date;
+
+        var IS_HIDDEN_MODE = false;
+
+        if (window['browserInterface'] && browserInterface.ChromeGetIncognitoState) {
+            function MAIN_IS_ChromeGetIncognitoStateCallBack(res) {
+                if (res) {
+                    IS_HIDDEN_MODE = true;
+                }
+            }
+
+            browserInterface.ChromeGetIncognitoState("MAIN_IS_ChromeGetIncognitoStateCallBack")
+        }
+        var BROWSER_DOWN_LIMIT = Number('209715200'); //普通浏览器下载大小限制
+        var GROUP_INFO = false;
+        var USER_INFO,user_id,USER_ID,USER_NAME,USER_FACE={};
+        var USER_SETTING = {};
+
+        var IS_BIG = 0;
+        var PAGE_VIP_URL = 'https://vip.115.com/vip';
+        var PAGE_VIP_SPACE_URL = 'https://vip.115.com/space';
+
+        var CONFIG_PHOTO_TEST = true;
+        var PAGE_HELP_KEYS = { };
+        var PAGE_UPLOAD_OCX_VERSION = {WIN: "v1.7.1.2", MAC: "v1.7.1.2", UNIX: "v1.5.7.0"};
+        var PAGE_UPLOAD_OCX_VERSION_2014 = {WIN: "v1.2.0", MAC: "v1.2.1", UNIX: "v1.1.8"};
+
+        var PAGE_KITE_OPEN_KEY = 1;
+
+        var PAGE_IS_API_PLUG = Number('');
+        var PAGE_DOMAIN_ROOT = '115.com';
+
+        var OPEN_VIEWER_KEY = true; //新版预览开关
+
+        var MIN_PLAY_ICON;
+        var USER_PERMISSION;
+
+        var IS_PREVIEW_CARD = '0'*1;
+        var LAB_TEST = 1;
+        var IS_COMPANY = 0;
+        var STATIC_DIR = 'https://115.com/static';
+        var INVITE_URL = '';
+        var SERVER_TIME = Number('1784746105') * 1000;
+        var GIFT_OPEN_KEY = 1;
+        var IS_OOF_COMPANY = Number('1');
+        var IS_ONLINE = false;
+        var IS_DEBUG_USER = Number('0');
+        var IS_SKEY_USER = 1;
+        var MAIN_UPTASK_COUNT = 3;
+        var BOSS_KEY = false;   //老板键
+        var IS_MOBILE_USER = Number('1'); //是否绑定手机
+        var FILECOUNT_LIMIT = Number('0');
+        var FILECOUNT_LIMITCOUNT = 50;
+                var NEWUPLOAD = 1;
+        var PAGE_NEW_UP_KEY = 1;
+                var APPLICATION = "115.com";
+
+        var LINSHIBL = "";
+        //加载目录数据
+        var SCREEN_PARAM = {width: 1000, height: window.screen.height - 218 - 130};
+        SCREEN_PARAM.page_count = Math.floor(SCREEN_PARAM.width / 125) * (Math.floor(SCREEN_PARAM.height / 174) + 1);
+        var nnStr = navigator.platform.toString().toLowerCase();
+        if ($.inArray(nnStr, ["iphone"]) != -1) {
+            SCREEN_PARAM.page_count = 15;
+        }
+        var PAGE_PATHS = {
+            MY: "https://my.115.com",
+            MY_OS: "https://my.115.com",
+            PASSPORT_N: 'https://passport.115.com',
+            PASSPORT: "https://passport.115.com",
+            WAN: "https://wan.115.com",
+            Q: "https://q.115.com",
+            MSG: "https://msg.115.com",
+            U: "https://115.com",
+            VIP: "https://vip.115.com",
+            HOME: "https://home.115.com",
+            UAPI: "https://webapi.115.com",
+            APP: "https://open.115.com",
+            UNION: "https://union.115.com",
+            PAY: "https://pay.115.com",
+            WENKU: "https://wenku.115.com",
+            PET: "https://pet.115.com",
+            STATIC: 'https://static.115.com',
+            APS: 'https://aps.115.com'
+        };
+
+        //加载配置数据
+        var UPLOAD_CONFIG ={"1":{"aid":1,"upload_url":"http:\/\/v8up.u.115.com\/upload","upload_type_limit":"*","upload_size_limit":123480309760},"2":{"aid":2,"upload_url":"http:\/\/v8up.u.115.com\/upload","upload_type_limit":["doc","docx","xls","pdf","ppt","wps","dps","et","mdb","reg","txt","wri","rtf","lrc","vob","sub","srt","ass","ssa","idx","jar","umd","xlsx","xlsm","xltx","xltm","xlam","xlsb","odt","pptx","ods","odp","chm","pot","pps","ppsx","smi","vtt","stl","sbv","ttml","ksc","snc","krc","c","cpp","h","asm","s","java","o","asp","aspx","bat","bas","prg","cmd","log","php","js","go","sh","css","scss","sass","less","class","hpp","cc","hex","hxx","cxx","c++","cs","py","pl","pm","md","cue","utf","dpt","ofd","eto","ets","mhtml","mht","uof","dot","wpt","dotx","docm","dotm","ett","xlt","pptm","ppsm","potx","potm","csv","xml","html","htm"],"upload_size_limit":123480309760},"3":{"aid":3,"upload_url":"http:\/\/v8up.u.115.com\/upload","upload_type_limit":["gif","jpg","png","jpeg","bmp","tif"],"upload_size_limit":123480309760,"upload_num_limit":1150},"4":{"aid":4,"upload_url":"http:\/\/v8up.u.115.com\/upload","upload_type_limit":["mp3","wma","wav","midi","flac","ram","ra","mid","aac","m4a","ape","au","ogg","aif","aiff","snd","voc","mpa","cda","vqf","wvx","wmx","m3u","m3u8","ttbl","ttpl","tta","tak","mpc","mp+","mp3pro","mpa","mp1","mp2","mp3","mac","xm","umx","stm","s3m","mtm","mod","it","far","mid","rmi","fla","dts","dtswav","awb"],"upload_size_limit":123480309760,"upload_num_limit":1150},"5":{"aid":5,"upload_url":"http:\/\/v8up.u.115.com\/upload"},"6":{"aid":6,"upload_url":"http:\/\/v8up.u.115.com\/upload"},"9":{"aid":9,"upload_url":"http:\/\/v8up.u.115.com\/upload","upload_type_limit":["asf","avi","wm","wmp","wmv","ram","rm","rmvb","rp","rpm","rt","smil","m1v","m2p","m2t","m2ts","m2v","mp2v","mpe","mpeg","mpg","mpv2","pss","pva","tp","tpr","ts","m4b","m4p","m4v","mp4","mpeg4","3g2","3gp","3gp2","3gpp","mov","qt","f4v","flv","hlv","swf","ifo","vob","amv","bik","csf","divx","evo","ivm","mkv","mod","mts","ogm","pmp","scm","tod","vp6","webm","xlmv","asx","pls","qpl","srt","dat"],"upload_size_limit":123480309760,"upload_num_limit":1150},"12":{"aid":12,"upload_url":"http:\/\/v8up.u.115.com\/upload","upload_type_limit":"*","upload_size_limit":16106127360,"upload_num_limit":0}};
+        var UPLOAD_CONFIG_H5 ={"cross":"https:\/\/upload.115.com\/cross.php","url":"https:\/\/upload.115.com\/upload?debugs=1&userid=21979215&ets=1784918905&appid=n&sig=419FFBFA892AE9DACF64FA48209E3E5A3C94FDE8","size_limit":1073741824};
+        var UPLOAD_CONFIG_NEW ={"app_id":0,"userkey":"2B1FEFB9805C5571BDFB87C3E4A4EC5FBD443C25","url_upload":"http:\/\/uplb.115.com\/2.0\/upload.php","url_resume":"http:\/\/uplb.115.com\/2.0\/resume.php","url_cancel":"http:\/\/uplb.115.com\/2.0\/cancel.php","size_limit":123480309760};
+
+        //增加SVG支持
+        UPLOAD_CONFIG['3']['upload_type_limit'].push('svg');
+        UPLOAD_CONFIG['3']['upload_type_limit'].push('pic');
+        UPLOAD_CONFIG['3']['upload_type_limit'].push('heic');
+
+        var USER_COOKIE = '';
+        var USER_COOKIE_LB = '';
+        var IS_MY_BOSS = $.inArray(USER_ID, ['55555', '10086', '101679']) != -1;
+        //老乡权限
+        USER_PERMISSION = {
+            is_vip: Number('1'),
+            is_vip_exp: Number('0'),
+            //is_vip_exp:0,
+            is_vip_exp_limit: Number("0"),
+                        share_dir: '49|',
+            lock_dir: Number(''),
+            lock_file: Number(''),
+                    }
+
+
+
+
+        //加载空间数据
+        var SPACE_DATA = eval('({"1":{"size_total_extend":0,"size_total_vip":0,"upload_size_limit":"0","size_used":43470199432447,"size_total_base":95351397069108.16,"size_auto_incr":11595565936948.148,"size_total":95351397069108.16,"size_remain":51881197636661.16,"size_used_percent":45.589473011015194},"4":{"size_used":0,"size_total":95351397069108.16}})');
+
+
+        USER_SETTING ={"asc_file":"0","order_file":"user_ptime","view_file":"list","language":"","page_num":"115","isp_download":"0","isp_upload":"0","play_count":5,"show_ad":"newapp40","ssl_download":"on","ssl_upload":"","kc_open":"1","user_edit_info":"","mobile":"","mobile_set":"","valid_type":"1","show":"0","show_client":"","movies":"0","movies_subtype":"{\"g\":[8,147],\"s\":[\"1\"]}","theme":"","theme_wl":"","tutorial":5,"first_login":"1","show_hit":"1","forever":"1","natsort":0,"prav_tv_channels":15,"prav_tv_channels_1":"{\"file\":1,\"photo\":1,\"star\":1,\"music\":1,\"receive\":1,\"video_viewed\":1,\"recent\":1}","root_folder":"user_otime:0:0","video_progress_bar":"0","video_play_mode":"1","lang_pack":"system","play_speed":1,"album_cover":1,"allow_radar_protocol":0,"allow_link_protocol":"1","allow_pubshare_protocol":"1","allow_similarphoto_protocol":0,"is_popup_showed":0,"display_week":1,"allow_global_protocol":"{\\\"is_allow\\\":1,\\\"protocol_update_time\\\":\\\"1649661878\\\"}","fc_mix":0,"is_into_transfer":0,"skip_silence":0,"is_silent_hint":"1","first_photo_backup":0,"first_play_video":"1","first_upload":1,"first_download":"1","insert_default_file_label":"1","subtitle_color":"#FFFFFF","subtitle_position":"0","subtitle_size_type":2,"subtitle_web_size":"48","subtitle_type":"3","last_file_type":"folder","last_file_id":"739884770980370058","default_search_path":0,"range_options_guide":"1","include_music_order":"","star_music_asc":0,"music_list_asc":0,"display_system_time":1,"display_play_time":1,"display_attribute":"0","file_label_sort":"update_time,desc","union_share_product":"","union_share_product_and":"","union_bill":0,"credentials_hide_number":1,"preview_orig_img":0,"life_exchange_learn_read":0,"enable_cover_file":1,"enable_cover_music":1,"enable_cover_video":1,"tv_home_all_files":1,"tv_home_listen":1,"tv_home_watch":1,"tv_home_cloud_download":1,"tv_home_recent_upload":1,"tv_home_recent_receive":1,"tv_home_recent_action":1,"tv_home_star_file":1,"tv_home_file_label":1,"tv_home_family_share":1,"tv_home_recycle_bin":1};
+
+        var USER_SPACE_LEVEL = Number('9');
+        var GET_8_TB_STATUS = true;
+
+        user_id = '21979215';
+
+        USER_ID = '21979215';
+        USER_NAME = "\u952e\u76d8\u7537";
+        USER_FACE = {
+            S: 'http://avatars.115.com/01/mjonu_s.jpg?1784746105',
+            M: 'http://avatars.115.com/01/mjonu_m.jpg?1784746105',
+            L: 'http://avatars.115.com/01/mjonu_l.jpg?1784746105'
+        };
+        USER_INFO = {
+            USER_ID: USER_ID,
+            USER_NAME: USER_NAME,
+            ALIAS_NAME: "",
+            IS_VIP: Number( 1)
+        }
+        ;
+
+
+        var JS_EVENTS = {
+            CLICK: 'click',
+            TOUCHSTART: 'touchstart',
+            TOUCHMOVE: 'touchmove'
+        }
+
+        var IS_IPAD = false;
+        if (navigator.platform.toString().toLowerCase() == "ipad") {
+            JS_EVENTS.CLICK = "touchend";
+            IS_IPAD = true;
+        }
+
+        var VIEWER_VERSION = '1783323668';
+
+        var PLUG_PATH = 'plug';
+        if (IS_BIG) {
+            PLUG_PATH = 'plug_big5';
+        }
+
+
+        var IS_KF;
+        var _HEADER_NOT_BTN_MUST_LOAD_IM_ = true;
+        var codeLoginData = { };
+
+        /*$(function(){
+            var is_panel_air_menu = function () {
+                setTimeout(function () {
+                    var $panel_air_menu = $(document.body).find('#js-panel_air_menu');
+                    if(location.href.indexOf('mode=home') != -1 || location.href.indexOf('mode=') == -1) {
+                        if($panel_air_menu.length && $panel_air_menu.attr('is_show')) {
+                            var height = $(window).height();
+                            if(height > 410) {
+                                $panel_air_menu.css('display','block');
+                            }else {
+                                $panel_air_menu.hide();
+                            }
+                        }
+                    }
+                    is_panel_air_menu();
+                },1000);
+            }
+            is_panel_air_menu();
+        })*/
+
+    </script>
+    <style type="text/css">
+        #js-im3-main-box{
+            top:10px;
+            bottom: 10px;
+        }
+    </style>
+    <script type="text/javascript"
+            src="//cdnres.115.com/site/static/js/wl_disk2014/min/core-min.js?_vh=d376e38_92"></script>
+    <script type="text/javascript"
+            src="//cdnres.115.com/site/static/js/wl_disk2014/min/extends-new-min.js?_vh=730dee3_92"></script>
+    <script type="text/javascript"
+            src="//cdnres.115.com/site/static/js/wl_disk2014/min/h5-upload2014-min.js?_vh=c84452d_92"></script>
+    <script type="text/javascript"
+            src="//cdnres.115.com/site/static/js/wl_disk2014/core/DG/DownFile.js?_vh=d971b3a_92"></script>
+    <script src="//cdnassets.115.com/plug/imageViewer/imageViewer.js?v=1783323668"
+            type="text/javascript"></script>
+    <script type="text/javascript">
+        Core.CONFIG.BTOpenKey = Number('1');
+Core.CONFIG.ImterimShareKey = 0;
+Core.CONFIG.ImterimShareMsg = "";
+Core.CONFIG.OpenMeituKey = Number('1');
+Core.CONFIG.OffLineKey = Number('1');
+Core.CONFIG.IsWindows = true;      //断点续传开关
+Core.FilePermission.Set(USER_PERMISSION);
+Core.CONFIG.FUpRsa1 = "56acf4e0442939dcf44467f9e3d5c1ecd77235c8";
+Core.CONFIG.FUpRsa2 = "7a18d181701edd40e1c48b24c2f44da7520bd7d1";
+Core.CONFIG.FUpDebug = false;
+
+                Core.CONFIG.TUploadServer = "http://lb.u.115.com/api/index.php";
+Core.CONFIG.TDeleteServer = "http://lb.u.115.com/api/index.php";
+                Core.CONFIG.TUpIsProxy = Number('');
+
+//OCX要求版本号
+Core.CONFIG.TUpFFVersion = "Ylmf Upload Plug-in v1.7.1";
+Core.CONFIG.TUpUnixVersion = "Ylmf Upload Plug-in v1.5.7";
+Core.CONFIG.TUpMacVersion = "Ylmf Upload Plug-in v1.7.1.2";
+
+Core.CONFIG.TUpFFVersion2014 = "1.2.0";
+Core.CONFIG.TUpUnixVersion2014 = "1.1.8";
+Core.CONFIG.TUpMacVersion2014 = "1.2.1";
+
+if (Core.CONFIG.IsWindows) {
+    USER_SETTING['isp_upload'] = Number(USER_SETTING['isp_upload']);
+    if (!USER_SETTING['isp_upload']) {
+        USER_SETTING['isp_upload'] = 0;
+    }
+    Core.CONFIG.UpEngine = 1;
+    if( !window['uploadInterface']) {
+        Core.CONFIG.UpEngine = 0;
+    }
+    Core.CONFIG.TUpSp = 0;
+    if (USER_SETTING['isp_upload']) {
+        Core.CONFIG.TUpSp = Number(USER_SETTING['isp_upload']) == 2 ? 1 : 0;
+    }
+}
+else {
+    Core.CONFIG.UpEngine = 0;
+}
+//设置默认tab
+var MainDefaultTab = Util.Cookie.get("cache_index_tab");
+if (!MainDefaultTab || MainDefaultTab == 'q' || MainDefaultTab == 'note') {
+    MainDefaultTab = "u";
+}
+Util.Cookie.set('cache_q_url2', '', -1);
+        Ext.CONFIG.PlugVersion = "1783323668";
+    </script>
+    <script type="text/javascript"
+            src="//cdnres.115.com/site/static/style_v11.2/js/common.header.js?_vh=15785cc_92"></script>
+    <script type="text/javascript">
+        var __SRC_DIALOG_BOX__ = "//cdnres.115.com/site/static/style_v11.2/common/css/dialog_box.css?_vh=f17e241_92"
+    </script>
+    <!--加载自定义访问码弹框，源文件在static_rc/components/DefineAccessCode.js-->
+    <script type="text/javascript"
+            src="//cdnres.115.com/site/static/components/DefineAccessCode.js?_vh=080861c_92"></script>
+    <!--加载自定义title展示组件，源文件在static_rc/components/DefineHoverTitle.js-->
+    <script type="text/javascript"
+            src="//cdnres.115.com/site/static/components/DefineHoverTitle.js?_vh=bd24190_92"></script>
+    <script async=""
+            src="https://www.115.com/static/api/module_config_new.js?v=1784746105318"></script>
+    <link rel="stylesheet"
+          href="//cdnres.115.com/site/static/style_v11.1/common/css/hint_guide.css?_vh=7668fee_92"
+          id="js-guide_help">
+    <style>
+        .swal2-popup.swal2-toast{box-sizing:border-box;grid-column:1/4!important;grid-row:1/4!important;grid-template-columns:1fr 99fr 1fr;padding:1em;overflow-y:hidden;background:#fff;box-shadow:0 0 1px hsla(0deg,0%,0%,.075),0 1px 2px hsla(0deg,0%,0%,.075),1px 2px 4px hsla(0deg,0%,0%,.075),1px 3px 8px hsla(0deg,0%,0%,.075),2px 4px 16px hsla(0deg,0%,0%,.075);pointer-events:all}.swal2-popup.swal2-toast>*{grid-column:2}.swal2-popup.swal2-toast .swal2-title{margin:.5em 1em;padding:0;font-size:1em;text-align:initial}.swal2-popup.swal2-toast .swal2-loading{justify-content:center}.swal2-popup.swal2-toast .swal2-input{height:2em;margin:.5em;font-size:1em}.swal2-popup.swal2-toast .swal2-validation-message{font-size:1em}.swal2-popup.swal2-toast .swal2-footer{margin:.5em 0 0;padding:.5em 0 0;font-size:.8em}.swal2-popup.swal2-toast .swal2-close{grid-column:3/3;grid-row:1/99;align-self:center;width:.8em;height:.8em;margin:0;font-size:2em}.swal2-popup.swal2-toast .swal2-html-container{margin:.5em 1em;padding:0;overflow:initial;font-size:1em;text-align:initial}.swal2-popup.swal2-toast .swal2-html-container:empty{padding:0}.swal2-popup.swal2-toast .swal2-loader{grid-column:1;grid-row:1/99;align-self:center;width:2em;height:2em;margin:.25em}.swal2-popup.swal2-toast .swal2-icon{grid-column:1;grid-row:1/99;align-self:center;width:2em;min-width:2em;height:2em;margin:0 .5em 0 0}.swal2-popup.swal2-toast .swal2-icon .swal2-icon-content{display:flex;align-items:center;font-size:1.8em;font-weight:700}.swal2-popup.swal2-toast .swal2-icon.swal2-success .swal2-success-ring{width:2em;height:2em}.swal2-popup.swal2-toast .swal2-icon.swal2-error [class^=swal2-x-mark-line]{top:.875em;width:1.375em}.swal2-popup.swal2-toast .swal2-icon.swal2-error [class^=swal2-x-mark-line][class$=left]{left:.3125em}.swal2-popup.swal2-toast .swal2-icon.swal2-error [class^=swal2-x-mark-line][class$=right]{right:.3125em}.swal2-popup.swal2-toast .swal2-actions{justify-content:flex-start;height:auto;margin:0;margin-top:.5em;padding:0 .5em}.swal2-popup.swal2-toast .swal2-styled{margin:.25em .5em;padding:.4em .6em;font-size:1em}.swal2-popup.swal2-toast .swal2-success{border-color:#a5dc86}.swal2-popup.swal2-toast .swal2-success [class^=swal2-success-circular-line]{position:absolute;width:1.6em;height:3em;transform:rotate(45deg);border-radius:50%}.swal2-popup.swal2-toast .swal2-success [class^=swal2-success-circular-line][class$=left]{top:-.8em;left:-.5em;transform:rotate(-45deg);transform-origin:2em 2em;border-radius:4em 0 0 4em}.swal2-popup.swal2-toast .swal2-success [class^=swal2-success-circular-line][class$=right]{top:-.25em;left:.9375em;transform-origin:0 1.5em;border-radius:0 4em 4em 0}.swal2-popup.swal2-toast .swal2-success .swal2-success-ring{width:2em;height:2em}.swal2-popup.swal2-toast .swal2-success .swal2-success-fix{top:0;left:.4375em;width:.4375em;height:2.6875em}.swal2-popup.swal2-toast .swal2-success [class^=swal2-success-line]{height:.3125em}.swal2-popup.swal2-toast .swal2-success [class^=swal2-success-line][class$=tip]{top:1.125em;left:.1875em;width:.75em}.swal2-popup.swal2-toast .swal2-success [class^=swal2-success-line][class$=long]{top:.9375em;right:.1875em;width:1.375em}.swal2-popup.swal2-toast .swal2-success.swal2-icon-show .swal2-success-line-tip{animation:swal2-toast-animate-success-line-tip .75s}.swal2-popup.swal2-toast .swal2-success.swal2-icon-show .swal2-success-line-long{animation:swal2-toast-animate-success-line-long .75s}.swal2-popup.swal2-toast.swal2-show{animation:swal2-toast-show .5s}.swal2-popup.swal2-toast.swal2-hide{animation:swal2-toast-hide .1s forwards}.swal2-container{display:grid;position:fixed;z-index:1060;top:0;right:0;bottom:0;left:0;box-sizing:border-box;grid-template-areas:"top-start     top            top-end" "center-start  center         center-end" "bottom-start  bottom-center  bottom-end";grid-template-rows:minmax(min-content,auto) minmax(min-content,auto) minmax(min-content,auto);height:100%;padding:.625em;overflow-x:hidden;transition:background-color .1s;-webkit-overflow-scrolling:touch}.swal2-container.swal2-backdrop-show,.swal2-container.swal2-noanimation{background:rgba(0,0,0,.4)}.swal2-container.swal2-backdrop-hide{background:0 0!important}.swal2-container.swal2-bottom-start,.swal2-container.swal2-center-start,.swal2-container.swal2-top-start{grid-template-columns:minmax(0,1fr) auto auto}.swal2-container.swal2-bottom,.swal2-container.swal2-center,.swal2-container.swal2-top{grid-template-columns:auto minmax(0,1fr) auto}.swal2-container.swal2-bottom-end,.swal2-container.swal2-center-end,.swal2-container.swal2-top-end{grid-template-columns:auto auto minmax(0,1fr)}.swal2-container.swal2-top-start>.swal2-popup{align-self:start}.swal2-container.swal2-top>.swal2-popup{grid-column:2;align-self:start;justify-self:center}.swal2-container.swal2-top-end>.swal2-popup,.swal2-container.swal2-top-right>.swal2-popup{grid-column:3;align-self:start;justify-self:end}.swal2-container.swal2-center-left>.swal2-popup,.swal2-container.swal2-center-start>.swal2-popup{grid-row:2;align-self:center}.swal2-container.swal2-center>.swal2-popup{grid-column:2;grid-row:2;align-self:center;justify-self:center}.swal2-container.swal2-center-end>.swal2-popup,.swal2-container.swal2-center-right>.swal2-popup{grid-column:3;grid-row:2;align-self:center;justify-self:end}.swal2-container.swal2-bottom-left>.swal2-popup,.swal2-container.swal2-bottom-start>.swal2-popup{grid-column:1;grid-row:3;align-self:end}.swal2-container.swal2-bottom>.swal2-popup{grid-column:2;grid-row:3;justify-self:center;align-self:end}.swal2-container.swal2-bottom-end>.swal2-popup,.swal2-container.swal2-bottom-right>.swal2-popup{grid-column:3;grid-row:3;align-self:end;justify-self:end}.swal2-container.swal2-grow-fullscreen>.swal2-popup,.swal2-container.swal2-grow-row>.swal2-popup{grid-column:1/4;width:100%}.swal2-container.swal2-grow-column>.swal2-popup,.swal2-container.swal2-grow-fullscreen>.swal2-popup{grid-row:1/4;align-self:stretch}.swal2-container.swal2-no-transition{transition:none!important}.swal2-popup{display:none;position:relative;box-sizing:border-box;grid-template-columns:minmax(0,100%);width:32em;max-width:100%;padding:0 0 1.25em;border:none;border-radius:5px;background:#fff;color:#545454;font-family:inherit;font-size:1rem}.swal2-popup:focus{outline:0}.swal2-popup.swal2-loading{overflow-y:hidden}.swal2-title{position:relative;max-width:100%;margin:0;padding:.8em 1em 0;color:inherit;font-size:1.875em;font-weight:600;text-align:center;text-transform:none;word-wrap:break-word}.swal2-actions{display:flex;z-index:1;box-sizing:border-box;flex-wrap:wrap;align-items:center;justify-content:center;width:auto;margin:1.25em auto 0;padding:0}.swal2-actions:not(.swal2-loading) .swal2-styled[disabled]{opacity:.4}.swal2-actions:not(.swal2-loading) .swal2-styled:hover{background-image:linear-gradient(rgba(0,0,0,.1),rgba(0,0,0,.1))}.swal2-actions:not(.swal2-loading) .swal2-styled:active{background-image:linear-gradient(rgba(0,0,0,.2),rgba(0,0,0,.2))}.swal2-loader{display:none;align-items:center;justify-content:center;width:2.2em;height:2.2em;margin:0 1.875em;animation:swal2-rotate-loading 1.5s linear 0s infinite normal;border-width:.25em;border-style:solid;border-radius:100%;border-color:#2778c4 transparent #2778c4 transparent}.swal2-styled{margin:.3125em;padding:.625em 1.1em;transition:box-shadow .1s;box-shadow:0 0 0 3px transparent;font-weight:500}.swal2-styled:not([disabled]){cursor:pointer}.swal2-styled.swal2-confirm{border:0;border-radius:.25em;background:initial;background-color:#7066e0;color:#fff;font-size:1em}.swal2-styled.swal2-confirm:focus{box-shadow:0 0 0 3px rgba(112,102,224,.5)}.swal2-styled.swal2-deny{border:0;border-radius:.25em;background:initial;background-color:#dc3741;color:#fff;font-size:1em}.swal2-styled.swal2-deny:focus{box-shadow:0 0 0 3px rgba(220,55,65,.5)}.swal2-styled.swal2-cancel{border:0;border-radius:.25em;background:initial;background-color:#6e7881;color:#fff;font-size:1em}.swal2-styled.swal2-cancel:focus{box-shadow:0 0 0 3px rgba(110,120,129,.5)}.swal2-styled.swal2-default-outline:focus{box-shadow:0 0 0 3px rgba(100,150,200,.5)}.swal2-styled:focus{outline:0}.swal2-styled::-moz-focus-inner{border:0}.swal2-footer{justify-content:center;margin:1em 0 0;padding:1em 1em 0;border-top:1px solid #eee;color:inherit;font-size:1em}.swal2-timer-progress-bar-container{position:absolute;right:0;bottom:0;left:0;grid-column:auto!important;overflow:hidden;border-bottom-right-radius:5px;border-bottom-left-radius:5px}.swal2-timer-progress-bar{width:100%;height:.25em;background:rgba(0,0,0,.2)}.swal2-image{max-width:100%;margin:2em auto 1em}.swal2-close{z-index:2;align-items:center;justify-content:center;width:1.2em;height:1.2em;margin-top:0;margin-right:0;margin-bottom:-1.2em;padding:0;overflow:hidden;transition:color .1s,box-shadow .1s;border:none;border-radius:5px;background:0 0;color:#ccc;font-family:serif;font-family:monospace;font-size:2.5em;cursor:pointer;justify-self:end}.swal2-close:hover{transform:none;background:0 0;color:#f27474}.swal2-close:focus{outline:0;box-shadow:inset 0 0 0 3px rgba(100,150,200,.5)}.swal2-close::-moz-focus-inner{border:0}.swal2-html-container{z-index:1;justify-content:center;margin:1em 1.6em .3em;padding:0;overflow:auto;color:inherit;font-size:1.125em;font-weight:400;line-height:normal;text-align:center;word-wrap:break-word;word-break:break-word}.swal2-checkbox,.swal2-file,.swal2-input,.swal2-radio,.swal2-select,.swal2-textarea{margin:1em 2em 3px}.swal2-file,.swal2-input,.swal2-textarea{box-sizing:border-box;width:auto;transition:border-color .1s,box-shadow .1s;border:1px solid #d9d9d9;border-radius:.1875em;background:0 0;box-shadow:inset 0 1px 1px rgba(0,0,0,.06),0 0 0 3px transparent;color:inherit;font-size:1.125em}.swal2-file.swal2-inputerror,.swal2-input.swal2-inputerror,.swal2-textarea.swal2-inputerror{border-color:#f27474!important;box-shadow:0 0 2px #f27474!important}.swal2-file:focus,.swal2-input:focus,.swal2-textarea:focus{border:1px solid #b4dbed;outline:0;box-shadow:inset 0 1px 1px rgba(0,0,0,.06),0 0 0 3px rgba(100,150,200,.5)}.swal2-file::-moz-placeholder,.swal2-input::-moz-placeholder,.swal2-textarea::-moz-placeholder{color:#ccc}.swal2-file::placeholder,.swal2-input::placeholder,.swal2-textarea::placeholder{color:#ccc}.swal2-range{margin:1em 2em 3px;background:#fff}.swal2-range input{width:80%}.swal2-range output{width:20%;color:inherit;font-weight:600;text-align:center}.swal2-range input,.swal2-range output{height:2.625em;padding:0;font-size:1.125em;line-height:2.625em}.swal2-input{height:2.625em;padding:0 .75em}.swal2-file{width:75%;margin-right:auto;margin-left:auto;background:0 0;font-size:1.125em}.swal2-textarea{height:6.75em;padding:.75em}.swal2-select{min-width:50%;max-width:100%;padding:.375em .625em;background:0 0;color:inherit;font-size:1.125em}.swal2-checkbox,.swal2-radio{align-items:center;justify-content:center;background:#fff;color:inherit}.swal2-checkbox label,.swal2-radio label{margin:0 .6em;font-size:1.125em}.swal2-checkbox input,.swal2-radio input{flex-shrink:0;margin:0 .4em}.swal2-input-label{display:flex;justify-content:center;margin:1em auto 0}.swal2-validation-message{align-items:center;justify-content:center;margin:1em 0 0;padding:.625em;overflow:hidden;background:#f0f0f0;color:#666;font-size:1em;font-weight:300}.swal2-validation-message::before{content:"!";display:inline-block;width:1.5em;min-width:1.5em;height:1.5em;margin:0 .625em;border-radius:50%;background-color:#f27474;color:#fff;font-weight:600;line-height:1.5em;text-align:center}.swal2-icon{position:relative;box-sizing:content-box;justify-content:center;width:5em;height:5em;margin:2.5em auto .6em;border:.25em solid transparent;border-radius:50%;border-color:#000;font-family:inherit;line-height:5em;cursor:default;-webkit-user-select:none;-moz-user-select:none;user-select:none}.swal2-icon .swal2-icon-content{display:flex;align-items:center;font-size:3.75em}.swal2-icon.swal2-error{border-color:#f27474;color:#f27474}.swal2-icon.swal2-error .swal2-x-mark{position:relative;flex-grow:1}.swal2-icon.swal2-error [class^=swal2-x-mark-line]{display:block;position:absolute;top:2.3125em;width:2.9375em;height:.3125em;border-radius:.125em;background-color:#f27474}.swal2-icon.swal2-error [class^=swal2-x-mark-line][class$=left]{left:1.0625em;transform:rotate(45deg)}.swal2-icon.swal2-error [class^=swal2-x-mark-line][class$=right]{right:1em;transform:rotate(-45deg)}.swal2-icon.swal2-error.swal2-icon-show{animation:swal2-animate-error-icon .5s}.swal2-icon.swal2-error.swal2-icon-show .swal2-x-mark{animation:swal2-animate-error-x-mark .5s}.swal2-icon.swal2-warning{border-color:#facea8;color:#f8bb86}.swal2-icon.swal2-warning.swal2-icon-show{animation:swal2-animate-error-icon .5s}.swal2-icon.swal2-warning.swal2-icon-show .swal2-icon-content{animation:swal2-animate-i-mark .5s}.swal2-icon.swal2-info{border-color:#9de0f6;color:#3fc3ee}.swal2-icon.swal2-info.swal2-icon-show{animation:swal2-animate-error-icon .5s}.swal2-icon.swal2-info.swal2-icon-show .swal2-icon-content{animation:swal2-animate-i-mark .8s}.swal2-icon.swal2-question{border-color:#c9dae1;color:#87adbd}.swal2-icon.swal2-question.swal2-icon-show{animation:swal2-animate-error-icon .5s}.swal2-icon.swal2-question.swal2-icon-show .swal2-icon-content{animation:swal2-animate-question-mark .8s}.swal2-icon.swal2-success{border-color:#a5dc86;color:#a5dc86}.swal2-icon.swal2-success [class^=swal2-success-circular-line]{position:absolute;width:3.75em;height:7.5em;transform:rotate(45deg);border-radius:50%}.swal2-icon.swal2-success [class^=swal2-success-circular-line][class$=left]{top:-.4375em;left:-2.0635em;transform:rotate(-45deg);transform-origin:3.75em 3.75em;border-radius:7.5em 0 0 7.5em}.swal2-icon.swal2-success [class^=swal2-success-circular-line][class$=right]{top:-.6875em;left:1.875em;transform:rotate(-45deg);transform-origin:0 3.75em;border-radius:0 7.5em 7.5em 0}.swal2-icon.swal2-success .swal2-success-ring{position:absolute;z-index:2;top:-.25em;left:-.25em;box-sizing:content-box;width:100%;height:100%;border:.25em solid rgba(165,220,134,.3);border-radius:50%}.swal2-icon.swal2-success .swal2-success-fix{position:absolute;z-index:1;top:.5em;left:1.625em;width:.4375em;height:5.625em;transform:rotate(-45deg)}.swal2-icon.swal2-success [class^=swal2-success-line]{display:block;position:absolute;z-index:2;height:.3125em;border-radius:.125em;background-color:#a5dc86}.swal2-icon.swal2-success [class^=swal2-success-line][class$=tip]{top:2.875em;left:.8125em;width:1.5625em;transform:rotate(45deg)}.swal2-icon.swal2-success [class^=swal2-success-line][class$=long]{top:2.375em;right:.5em;width:2.9375em;transform:rotate(-45deg)}.swal2-icon.swal2-success.swal2-icon-show .swal2-success-line-tip{animation:swal2-animate-success-line-tip .75s}.swal2-icon.swal2-success.swal2-icon-show .swal2-success-line-long{animation:swal2-animate-success-line-long .75s}.swal2-icon.swal2-success.swal2-icon-show .swal2-success-circular-line-right{animation:swal2-rotate-success-circular-line 4.25s ease-in}.swal2-progress-steps{flex-wrap:wrap;align-items:center;max-width:100%;margin:1.25em auto;padding:0;background:0 0;font-weight:600}.swal2-progress-steps li{display:inline-block;position:relative}.swal2-progress-steps .swal2-progress-step{z-index:20;flex-shrink:0;width:2em;height:2em;border-radius:2em;background:#2778c4;color:#fff;line-height:2em;text-align:center}.swal2-progress-steps .swal2-progress-step.swal2-active-progress-step{background:#2778c4}.swal2-progress-steps .swal2-progress-step.swal2-active-progress-step~.swal2-progress-step{background:#add8e6;color:#fff}.swal2-progress-steps .swal2-progress-step.swal2-active-progress-step~.swal2-progress-step-line{background:#add8e6}.swal2-progress-steps .swal2-progress-step-line{z-index:10;flex-shrink:0;width:2.5em;height:.4em;margin:0 -1px;background:#2778c4}[class^=swal2]{-webkit-tap-highlight-color:transparent}.swal2-show{animation:swal2-show .3s}.swal2-hide{animation:swal2-hide .15s forwards}.swal2-noanimation{transition:none}.swal2-scrollbar-measure{position:absolute;top:-9999px;width:50px;height:50px;overflow:scroll}.swal2-rtl .swal2-close{margin-right:initial;margin-left:0}.swal2-rtl .swal2-timer-progress-bar{right:0;left:auto}@keyframes swal2-toast-show{0%{transform:translateY(-.625em) rotateZ(2deg)}33%{transform:translateY(0) rotateZ(-2deg)}66%{transform:translateY(.3125em) rotateZ(2deg)}100%{transform:translateY(0) rotateZ(0)}}@keyframes swal2-toast-hide{100%{transform:rotateZ(1deg);opacity:0}}@keyframes swal2-toast-animate-success-line-tip{0%{top:.5625em;left:.0625em;width:0}54%{top:.125em;left:.125em;width:0}70%{top:.625em;left:-.25em;width:1.625em}84%{top:1.0625em;left:.75em;width:.5em}100%{top:1.125em;left:.1875em;width:.75em}}@keyframes swal2-toast-animate-success-line-long{0%{top:1.625em;right:1.375em;width:0}65%{top:1.25em;right:.9375em;width:0}84%{top:.9375em;right:0;width:1.125em}100%{top:.9375em;right:.1875em;width:1.375em}}@keyframes swal2-show{0%{transform:scale(.7)}45%{transform:scale(1.05)}80%{transform:scale(.95)}100%{transform:scale(1)}}@keyframes swal2-hide{0%{transform:scale(1);opacity:1}100%{transform:scale(.5);opacity:0}}@keyframes swal2-animate-success-line-tip{0%{top:1.1875em;left:.0625em;width:0}54%{top:1.0625em;left:.125em;width:0}70%{top:2.1875em;left:-.375em;width:3.125em}84%{top:3em;left:1.3125em;width:1.0625em}100%{top:2.8125em;left:.8125em;width:1.5625em}}@keyframes swal2-animate-success-line-long{0%{top:3.375em;right:2.875em;width:0}65%{top:3.375em;right:2.875em;width:0}84%{top:2.1875em;right:0;width:3.4375em}100%{top:2.375em;right:.5em;width:2.9375em}}@keyframes swal2-rotate-success-circular-line{0%{transform:rotate(-45deg)}5%{transform:rotate(-45deg)}12%{transform:rotate(-405deg)}100%{transform:rotate(-405deg)}}@keyframes swal2-animate-error-x-mark{0%{margin-top:1.625em;transform:scale(.4);opacity:0}50%{margin-top:1.625em;transform:scale(.4);opacity:0}80%{margin-top:-.375em;transform:scale(1.15)}100%{margin-top:0;transform:scale(1);opacity:1}}@keyframes swal2-animate-error-icon{0%{transform:rotateX(100deg);opacity:0}100%{transform:rotateX(0);opacity:1}}@keyframes swal2-rotate-loading{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}@keyframes swal2-animate-question-mark{0%{transform:rotateY(-360deg)}100%{transform:rotateY(0)}}@keyframes swal2-animate-i-mark{0%{transform:rotateZ(45deg);opacity:0}25%{transform:rotateZ(-25deg);opacity:.4}50%{transform:rotateZ(15deg);opacity:.8}75%{transform:rotateZ(-5deg);opacity:1}100%{transform:rotateX(0);opacity:1}}body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-shown){overflow:hidden}body.swal2-height-auto{height:auto!important}body.swal2-no-backdrop .swal2-container{background-color:transparent!important;pointer-events:none}body.swal2-no-backdrop .swal2-container .swal2-popup{pointer-events:all}body.swal2-no-backdrop .swal2-container .swal2-modal{box-shadow:0 0 10px rgba(0,0,0,.4)}@media print{body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-shown){overflow-y:scroll!important}body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-shown)>[aria-hidden=true]{display:none}body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-shown) .swal2-container{position:static!important}}body.swal2-toast-shown .swal2-container{box-sizing:border-box;width:360px;max-width:100%;background-color:transparent;pointer-events:none}body.swal2-toast-shown .swal2-container.swal2-top{top:0;right:auto;bottom:auto;left:50%;transform:translateX(-50%)}body.swal2-toast-shown .swal2-container.swal2-top-end,body.swal2-toast-shown .swal2-container.swal2-top-right{top:0;right:0;bottom:auto;left:auto}body.swal2-toast-shown .swal2-container.swal2-top-left,body.swal2-toast-shown .swal2-container.swal2-top-start{top:0;right:auto;bottom:auto;left:0}body.swal2-toast-shown .swal2-container.swal2-center-left,body.swal2-toast-shown .swal2-container.swal2-center-start{top:50%;right:auto;bottom:auto;left:0;transform:translateY(-50%)}body.swal2-toast-shown .swal2-container.swal2-center{top:50%;right:auto;bottom:auto;left:50%;transform:translate(-50%,-50%)}body.swal2-toast-shown .swal2-container.swal2-center-end,body.swal2-toast-shown .swal2-container.swal2-center-right{top:50%;right:0;bottom:auto;left:auto;transform:translateY(-50%)}body.swal2-toast-shown .swal2-container.swal2-bottom-left,body.swal2-toast-shown .swal2-container.swal2-bottom-start{top:auto;right:auto;bottom:0;left:0}body.swal2-toast-shown .swal2-container.swal2-bottom{top:auto;right:auto;bottom:0;left:50%;transform:translateX(-50%)}body.swal2-toast-shown .swal2-container.swal2-bottom-end,body.swal2-toast-shown .swal2-container.swal2-bottom-right{top:auto;right:0;bottom:0;left:auto}
+    </style>
+    <style>
+        @keyframes hue {
+            from {
+                filter: hue-rotate(0);
+            }
+
+            to {
+                filter: hue-rotate(360deg);
+            }
+        }
+
+        .rainbow-text {
+            display: inline-block;
+            color: red;
+            animation: hue 6s linear infinite;
+            background-image: linear-gradient(to right bottom, rgb(255,0,0), rgb(255,255,0),rgb(255,0,255));
+            -webkit-background-clip: text;
+        }
+
+            .my115Info{
+                color:red
+            }
+            .btnInGrid{
+                height:20px;
+                width:20px;
+                margin-left:-22px;
+                margin-top:36px;
+                border:0px;
+                border-color:transparent;
+                background-color:transparent;
+            }
+
+            .btnInGrid i{
+                margin:3px -3px
+            }
+
+            li:hover .btnInGrid{
+                background-color:#2777F8 !important
+            }
+
+
+
+            /* Style The Dropdown Button */
+            .my115Dropbtn {
+              background-color: #2777F8;
+              color: white;
+              font-size: 16px;
+              border: none;
+              cursor: pointer;
+            }
+
+            /* The container <div> - needed to position the dropdown content */
+            .my115Dropdown {
+              position: relative;
+              display: inline-block;
+            }
+
+            /* Dropdown Content (Hidden by Default) */
+            .my115Dropdown-content {
+              display: none;
+              position: absolute;
+              background-color: #f9f9f9;
+              min-width: 230px;
+              box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+              z-index: 1;
+              margin-top: 32px;
+            }
+
+            /* Links inside the dropdown */
+            .my115Dropdown-content a {
+              color: black;
+              padding: 12px 16px;
+              text-decoration: none;
+              display: block;
+              cursor: pointer;
+              margin:4px;
+            }
+
+            /* Change color of dropdown links on hover */
+            .my115Dropdown-content a:hover{
+                background-color: #2777F8;
+                color:white;
+            }
+
+            /* Show the dropdown menu on hover */
+            .my115Dropdown:hover .my115Dropdown-content {
+              display: block;
+            }
+
+            /* Change the background color of the dropdown button when the dropdown content is shown */
+            .my115Dropdown:hover .my115Dropbtn {
+              background-color: #3e8e41;
+            }
+
+    </style>
+    <script async="" src="//cdnassets.115.com/plug/errorRequest/errorRequest.js"></script>
+    <link id="cdnassets115complugemojiFontcssemojicss" rel="stylesheet" type="text/css"
+          href="//cdnassets.115.com/plug/emojiFont/css/emoji.css">
+</head>
+
+<body class="emoji-support minimal-ui">
+<div class="fp-1784746105452" style="display: none;"></div>
+<style type="text/css">
+    .fp-1784746105452{position: fixed;left: 0;top:0;right: 0;bottom:0;pointer-events: none;z-index: 999999999999999999;background:url(data:image/png;base64,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);} @media print{ .fp-1784746105452{background: none;}}
+</style>
+
+
+<a href="/?old=1" class="fsb-notice" style="position:absolute;top:-99999px;left:-99999px;">
+    <span>旧版</span>
+</a>
+<!-- !动画层 -->
+<div class="animate-layer"><s class="ait-0"></s><s class="ait-1"></s><s class="ait-2"></s><s
+        class="ait-3"></s><s class="ait-4"></s><s class="ait-5"></s><s class="ait-6"></s><s
+        class="ait-7"></s><s class="ait-8"></s><s class="ait-9"></s></div>
+<!--//-->
+
+<div class="container-frame">
+    <!-- !左侧栏 -->
+    <script type="text/javascript">
+        CommonHeader.writeLeftNav('wangpan', false)
+    </script>
+    <div class="container-leftside" id="js-main_leftUI">
+        <div class="logo-ceiling"><a href="//115.com"><s>115生活，一生相伴</s></a></div>
+        <div class="top-side">
+            <div class="navigation-ceiling">
+                <ul>
+                    <li mode_btn="wangpan" class="current"><a href="//115.com/storage/netdisk"><i
+                            class="icon-nc-core"></i><span>存储</span></a></li>
+                    <li mode_btn="home"><a href="//115.com/social/jianghu"><i
+                            class="icon-nc-lifetime"></i><span>社交</span></a></li>
+                    <li mode_btn="vip"><a href="//115.com/life/mine/vip"><i
+                            class="icon-nc-together"></i><span>生活<div
+                            data-rp="life_exchange_learn_read"
+                            style="position: absolute; top: 2px; right: 9px; width: 8px; height: 8px; background-color: rgb(255, 75, 48); border-radius: 50%;"></div></span></a>
+                    </li>
+                </ul>
+            </div>
+            <div class="navigation-ceiling nc-add">
+                <ul>
+                    <li mode_btn="add">
+                        <a href="javascript:;"><i class="icon-nc-add"></i><span>新建</span></a>
+                    </li>
+                </ul>
+                <div class="popup-navigation-ceiling" id="add_more_menu"
+                     style="top: 60px; left: 100%;">
+                    <dl>
+                        <dt><strong>存储</strong><a href="//yun.115.com/login" target="_blank"
+                                                    style="display:none;" id="js_goto_yun"
+                                                    class="btn-office"><i
+                                class="icon-btn-side ibs-office"></i><span>115管理</span></a><a
+                                href="//115.com/" target="_blank" class="btn-site"><i
+                                class="icon-btn-side ibs-site"></i><span>115官网</span></a></dt>
+                        <dd>
+                            <div class="group">
+                                <div class="title">文件</div>
+                                <div class="cont"><a href="javascript:;" cls="file"><i
+                                        class="ipnc-file"> </i><span>文件</span></a><a
+                                        href="javascript:;" cls="folder"><i
+                                        class="ipnc-folder"> </i><span>文件夹</span></a><a
+                                        href="javascript:;" cls="linktask"><i
+                                        class="ipnc-linktask"> </i><span>云下载</span></a><a
+                                        href="javascript:;" cls="doc"><i
+                                        class="ipnc-doc"> </i><span>文档</span></a><a
+                                        href="javascript:;" cls="docx"><i
+                                        class="ipnc-docx"> </i><span>Word文档</span></a><a
+                                        href="javascript:;" cls="xlsx"><i
+                                        class="ipnc-xlsx"> </i><span>Excel表格</span></a><a
+                                        href="javascript:;" cls="pptx"><i
+                                        class="ipnc-pptx"> </i><span>PPT文稿</span></a><br></div>
+                            </div>
+                            <div class="group">
+                                <div class="title">设备</div>
+                                <div class="cont"><a href="javascript:;" cls="album"><i
+                                        class="ipnc-album"> </i><span>相册</span></a><a
+                                        href="javascript:;" cls="contacts"><i
+                                        class="ipnc-contacts"> </i><span>通讯录</span></a></div>
+                            </div>
+                            <div class="group">
+                                <div class="title">其他</div>
+                                <div class="cont"><a href="javascript:;" cls="certificates"><i
+                                        class="ipnc-certificates"> </i><span>证照</span></a><a
+                                        href="javascript:;" cls="schedule"><i
+                                        class="ipnc-schedule"> </i><span>日程</span></a><a
+                                        href="javascript:;" cls="diary"><i
+                                        class="ipnc-diary"> </i><span>日记</span></a><a
+                                        href="javascript:;" cls="note"><i
+                                        class="ipnc-note"> </i><span>记事</span></a></div>
+                            </div>
+                        </dd>
+                    </dl>
+                    <dl>
+                        <dt><strong>社交</strong><a href="//115.com/q/create" target="_blank"
+                                                    class="btn-office">创建社区</a></dt>
+                        <dd><a href="javascript:;" cls="story"><i
+                                class="ipnc-story"> </i><span>传说</span></a><a href="javascript:;"
+                                                                                cls="community"><i
+                                class="ipnc-community"> </i><span>帖子</span></a><a
+                                href="javascript:;" cls="memberadd"><i
+                                class="ipnc-memberadd"> </i><span>老乡</span></a><a
+                                href="javascript:;" cls="groupchat"><i
+                                class="ipnc-groupchat"> </i><span>群聊</span></a></dd>
+                    </dl>
+                    <dl>
+                        <dt><strong>生活</strong></dt>
+                        <dd><a href="javascript:;" cls="vip"><i
+                                class="ipnc-vip"> </i><span>购买VIP</span></a><a href="javascript:;"
+                                                                                 cls="addresume"><i
+                                class="ipnc-addresume"> </i><span>应聘材料</span></a></dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+        <div class="bottom-side">
+            <div class="navigation-ceiling">
+                <ul>
+                    <li><a href="javascript:;" id="js_left_notice" class="btn-ceiling"><i
+                            class="ibc-notice"></i><span>我聊</span><em id="js-ch-no_im"
+                                                                        style="display:none;">0</em></a>
+                    </li>
+                    <li><a href="javascript:;" id="js_feedback_main" class="btn-ceiling"><i
+                            class="ibc-service"></i><span>帮助</span></a></li>
+                    <li><a href="javascript:;" class="btn-ceiling"
+                           onclick="top.CommonHeader.showClientDownLoad()"><i
+                            class="ibc-app"></i><span>客户端</span></a></li>
+                </ul>
+            </div>
+            <div class="ceiling-user-info" id="js-side_ceiling"><a
+                    href="//vip.115.com/?p=svip&amp;to=21979215&amp;r=21979215" target="_blank"
+                    class="sign-vip-card">年费VIP</a>
+                <div class="user-wrap" id="js-side_ceiling">
+                    <div style="display:none" class="user-title"><a id="js-ch-login-btn"
+                                                                    href="javascript:;"><span>登录</span></a>
+                    </div>
+                    <div style="" class="user-avatar" id="js-ch-member-face_par"><a
+                            href="//115.com/?mode=my_set"><img id="js-ch-member-face"
+                                                               src="https://avatars.115.com/01/mjonu_m.jpg?_t=1784746105"
+                                                               alt=""></a></div>
+                    <div style="" class="user-title"><a id="js-ch-member-info"
+                                                        href="javascript:;"><span rel="user_name">键盘男</span><s></s></a>
+                    </div>
+                </div>
+            </div>
+            <div id="js-ch-member-menu" class="user-popup usp-vip-card"><s class="arrow"></s> <i
+                    class="arrow"><img src="//cdnassets.115.com/images/transparent.gif" alt=""></i>
+                <div class="cup-box">
+                    <div class="cup-info">
+                        <div class="user-blur"></div>
+                        <div class="user-head"><img rel="user_face"
+                                                    src="https://avatars.115.com/01/mjonu_2m.jpg?_t=1784746105"
+                                                    alt=""></div>
+                        <div class="user-name"><strong rel="user_name">键盘男</strong><span
+                                rel="vip"><a
+                                href="//vip.115.com/?p=svip&amp;to=21979215&amp;r=21979215"
+                                target="_blank" class="sign-vip-card">年费VIP</a></span></div>
+                        <div class="user-identity"><span rel="user_id">21979215</span></div>
+                        <i class="sign-vipmedal-card" rel="vip_level" title="体验V">年费VIP</i>
+                    </div>
+                    <div class="cup-operate">
+                        <dl>
+                            <dd><a href="//vip.115.com/?p=index_info_vip"><i
+                                    class="ipnc-vip"></i><span>VIP服务</span></a><a
+                                    href="//115.com/?mode=my_set"><i
+                                    class="ipnc-personal"></i><span>个人资料</span></a><a
+                                    href="//115.com/home/userhome"><i
+                                    class="ipnc-homepage"></i><span>个人主页</span></a><a
+                                    href="//115.com/?mode=my_set&amp;nav=safe"><i
+                                    class="ipnc-center"></i><span>设置</span></a></dd>
+                        </dl>
+                    </div>
+                    <div class="cup-quit"><a rel="logout" target="_top"
+                                             href="//passportapi.115.com/app/1.0/web/1.0/logout/logout/?goto=%2F%2F115.com"><i
+                            class="icon-info ifo-quit"></i><span>退出</span></a></div>
+                </div>
+            </div>
+            <div class="ceiling-vip-door"><a href="javascript:;" class="button btn-small btn-golden"
+                                             id="open_vip_page"><i
+                    class="icon-black-diamond"></i><span rel="vip_btn_text">购买VIP</span></a></div>
+        </div>
+        <div class="popup-navigation-li" rel="entry_box"
+             style="display: none; position: absolute;top: 60px;left: 100%">
+            <div class="arrow"></div>
+            <div class="popup-navigation-ceiling">
+                <dl style="display: none;" rel="save_entry">
+                    <dd>
+                        <div class="line"><a href="//115.com/storage/netdisk"><i
+                                class="ipnc-onlinestorage"></i><span>网盘</span></a><a
+                                href="//album.115.com/"><i class="ipnc-album"></i><span>相册</span></a><a
+                                href="//ictxl.115.com/index"><i
+                                class="ipnc-contacts"></i><span>通讯录</span></a><a
+                                href="//credentials.115.com/#/smsbackup"><i
+                                class="ipnc-msg"></i><span>短信</span></a><a
+                                href="//credentials.115.com/#/documentbackup"><i
+                                class="ipnc-doc"></i><span>文档</span></a></div>
+                        <div class="line"><a href="//credentials.115.com/#/weChatbackup"><i
+                                class="ipnc-wx"></i><span>微信文件</span></a><a
+                                href="//115.com/?mode=note"><i
+                                class="ipnc-note"></i><span>记事</span></a><a
+                                href="//credentials.115.com/#/"><i
+                                class="ipnc-safe"></i><span>密档</span></a></div>
+                    </dd>
+                </dl>
+                <dl style="display: none;" rel="home_entry">
+                    <dd>
+                        <div class="line"><a href="//115.com/social/jianghu"><i
+                                class="ipnc-story"></i><span>江湖</span></a><a
+                                href="//115.com/social/community"><i
+                                class="ipnc-community"></i><span>社区</span></a></div>
+                    </dd>
+                </dl>
+                <dl style="display: none;" rel="job_entry">
+                    <dd>
+                        <div class="line"><a href="//115.com/life/mine/vip"><i
+                                class="ipnc-profile"></i><span>我的</span></a><a
+                                href="//115.com/?aac=index&amp;mode=life"><i
+                                class="ipnc-schedule"></i><span>日程</span></a><a
+                                href="//xue.115.com/"><i
+                                class="ipnc-learn"></i><span>学习</span></a><a
+                                href="//115.com/life/jobs"><i
+                                class="ipnc-job"></i><span>找工作</span></a></div>
+                    </dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+    <!--//-->
+    <div id="js_main_container" frame-conent="" class="container-main">
+        <!--顶部菜单-->
+        <script type="text/javascript">
+            console.log(44444)
+CommonHeader.writeTopNav();
+                   $(function () {
+var keyword = decodeURIComponent(top.oofUtil.getQueryParamByKey('keyword',top.location.href)) || '';
+var $top_search = $('#js-top_search'),
+   $text = $('#js-top_search_text'),
+   $button = $('#js-top_search_button'),
+   $clear = $('#js-top_search_clear');
+
+
+if (keyword) {
+   $text.val(keyword);
+}
+var search_time;
+var getAidCid = function(){
+   try{
+       var main = Ext.CACHE.FileMain;
+       return main.Setting.GetActive();
+   }catch(e){
+       return {cid:0, aid:-1, name:''}
+   }
+};
+$top_search.on('mouseenter', function () {
+   search_time && clearTimeout(search_time);
+   search_time = setTimeout(function() {
+       $text.focus();
+   },200);
+}).on('mouseleave', function () {
+   search_time && clearTimeout(search_time);
+})
+
+$text.on('keyup', function() {
+   var $this = $(this),
+       txt = $.trim($this.val())
+   if(txt.length) {
+       $clear.show();
+   }else {
+       $clear.hide();
+   }
+}).on('keydown', function(e) {
+   var $this = $(this),
+       txt = $.trim( $this.val() ),
+       type = $this.attr('_type');
+   if(e.keyCode == 13) {
+       $button.trigger('click');
+       return false;
+   }
+})
+$clear.on('click', function () {
+   $(this).hide();
+   $text.val('');
+
+   try{ //清空输入框时优先清空aid、cid
+       var data = getAidCid()
+       data.aid='1';
+       data.cid='';
+   }catch(e){
+
+   }
+
+   $('#js-search_back').click();
+   //清空使用返回主模块
+   //  $button.trigger('click');
+   return false;
+})
+$button.on('click', function () {
+
+   var type = $text.attr('_type') || '',
+       txt = $.trim($text.val()),
+       _tab = $text.attr('_tab') || 'topic',
+       tags_name = decodeURIComponent(oofUtil.getQueryParamByKey('tags_name'));
+   mode = oofUtil.getQueryParamByKey('mode');
+   var cmode ;
+   if(mode=='note'||mode=='search'||mode=='home'||mode=='mobile_contact' || mode=='collect' || mode=='life'){
+       cmode = mode;
+   }else{
+       cmode = 'wangpan';
+   }
+
+   if(location.href.indexOf('/home') != -1) {
+       cmode = 'home';
+   }
+
+   if(!txt.length) {
+       if(type == 'home') {
+           location.href = '//115.com/?mode=home';
+       }else {
+           try{ //清空输入框时优先清空aid、cid
+               var data = getAidCid()
+               data.aid='1';
+               data.cid='';
+           }catch(e){
+
+           }
+           // oofUtil.urlMaintain.changeMode(cmode);
+           $('#js-search_back').click();
+       }
+       return false;
+   }
+
+   var searchObj = {
+       url:'',
+       submode:cmode
+   }
+   var _keyword = encodeURIComponent(txt);
+   switch (cmode) {
+       case 'home':
+           searchObj.url = '//115.com/home/searchlist?keyword='+_keyword+'&type=topic';
+           break;
+       case 'wangpan':
+           var ac = getAidCid();
+           if(ac.aid == -3) {
+               ac.aid = 1;
+           }
+           ac.name = ac.name || '';
+           searchObj.url = '//115.com/?aid='+ac.aid+'&cid='+ac.cid+'&old_cid='+ac.cid+'&old_cid_name='+encodeURIComponent(ac.name)+'&search_value='+_keyword+'&ct=file&ac=search&is_wl_tpl=1';
+           break;
+       case 'life':
+           searchObj.url = '//life.115.com/calendar/search?keyword='+_keyword+'&tags_name='+tags_name+'&start_time=&end_time=';
+           break;
+       case 'note':
+           searchObj.url = '//note.115.com/?ct=note&ac=web&page=new&keyword='+_keyword+'&tags_name='+tags_name;
+
+           break;
+       case 'search':
+           var _url = decodeURIComponent(oofUtil.getQueryParamByKey('url'));
+           var _domain = _url.split('?')[0];
+           var _par = oofUtil.getQueryParams(_url);
+           if(_par['keyword'] || _par['keyword']=='') {
+               _par['keyword'] = _keyword;
+           }else if(_par['search_value'] || _par['search_value']=='') {
+               _par['search_value'] = _keyword;
+           }
+           var params = []
+           for (var i in _par) {
+               if (!i || !_par[i]) continue;
+               params.push(i+'='+_par[i])
+           }
+           searchObj.url = _domain+'?'+params.join('&');
+           cmode = oofUtil.getQueryParamByKey('submode');
+           break;
+       case'mobile_contact':
+           searchObj.url = '//ictxl.115.com/' + type + '?keyword=' + _keyword;
+           break;
+       default:
+           searchObj.url = '/?keyword='+_keyword;
+           break;
+   }
+   if(searchObj.url) {
+       location.href = '//115.com/?mode=search&submode='+cmode+'&url='+ encodeURIComponent(searchObj.url);
+       // oofUtil.urlMaintain.changeMode('search', searchObj);
+   }
+   return false;
+})
+
+setTimeout(function(){
+   $text.focus();
+},200);
+
+})
+        </script>
+        <div class="main-top" ref="js_left_nav_box" no-file-select="">
+            <!-- 导航 -->
+            <div class="panel-nav">
+                <!-- 115 -->
+
+                <a href="//115.com/?mode=wangpan" data-nav="file" class="current"><span>网盘</span></a>
+
+                <a href="//album.115.com" data-nav="photo"><span>备份</span></a>
+
+                <a href="//credentials.115.com/#/" data-nav="credentials"><span>密档</span></a>
+
+                <a href="//115.com/?mode=note" data-nav="note"><span>记事</span></a>
+
+
+            </div>
+            <!-- 搜索 -->
+            <div class="search-ceiling" id="js-top_search" style="">
+                <div class="search-box">
+                    <input type="text" istarget="record" id="js-top_search_text" name=""
+                           autocomplete="off" placeholder="搜索(control+K或/)">
+                    <button type="button" istarget="record" id="js-top_search_button"><i
+                            istarget="record">搜索</i></button>
+                    <a href="javascript:;" istarget="record" id="js-top_search_clear" class="clean"
+                       style="display: none;"><s istarget="record">清空</s></a>
+                </div>
+                <div class="search-suggest" style="display: none;" rel="search-suggest">
+                    <div class="cell" istarget="record">
+                        <ul rel="search_record" istarget="record">
+                        </ul>
+                    </div>
+                    <div class="row-bottom" rel="row_bottom" istarget="record">
+                        <a href="javascript:;" istarget="record"
+                           rel="remove_all_keyword">清空历史记录</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ceiling-feature" id="js_common_act-enter" style="">
+                <a ref="href" href="https://www.115.com/17?f=ad1#&amp;f=ad1#" target="_top"
+                   class="btn-feature">
+                    <img src="https://cdnimg.115.com/78c227bbc19597252978275092433a92/6A611079/6a448c78fb4a08ce920b1a03d2b0e11384d979f8_400_60"
+                         ref="img" alt="" height="30px">
+                    <s ref="text">你的回忆 · 一直都存在</s>
+                </a>
+            </div>
+            <!-- 净网 -->
+            <div class="ceiling-link-temp" style="margin-left: 20px">
+                <a href="https://115.com/115/T339632.html"
+                   target="_blank"><span>净网2026 </span></a>
+                <a href="https://115.com/agreement.html" target="_blank"><span>请遵守《<span
+                        style="color:rgb(13, 71, 161)">服务协议</span>》严禁违法违规信息</span></a>
+
+            </div>
+            <div class="right-side">
+                <!-- 我听 -->
+                <div class="music-box" style="display:none;" id="musics">
+                    <a href="//115.com/?ct=music#" target="OOF_MUSIC">
+                        <div class="icon-voice playing" id="playing"><i></i><i></i><i></i></div>
+                        <div class="title" id="music_name"></div>
+                    </a>
+                </div>
+            </div>
+            <!-- 切换新版 / 旧版 -->
+            <a href="//115.com/storage/netdisk" class="toggle-new-or-old">
+                <i></i>
+                <span>体验新版</span>
+            </a>
+        </div>
+
+        <!--内容区-->
+        <div class="main-master">
+
+            <!--搜索-->
+
+            <!-- 频道：115 -->
+            <div class="view-width" frame-data="" style="">
+
+                <div class="wrap-hflow">
+                    <script type="text/javascript">
+                        CommonHeader.writeLeftSubNav()
+                    </script>
+                    <div class="sub-hflow" no-file-select="" id="site_left_bar"
+                         style="display: none;">
+                        <div class="sub-hflow-container">
+                            <div class="sub-hflow-file" id="js_sub_nav_scroller_wrap">
+                                <div class="fixedheight" id="js_box_view">
+
+                                    <a href="//115.com/?cid=0&amp;offset=0&amp;mode=wangpan"
+                                       data-nav="file" id="js_to_home" rel_tab="file"
+                                       tab_btn="wangpan" mode-data="{'cid':0}">
+                                        <div class="file-module-allfile-new current"
+                                             id="js_sub_nav_bottom">
+                                            <div id="js_left_space_box">
+                                                <div class="header">
+                                                    <div class="folder-icon"></div>
+                                                    <div class="title-info">
+                                                        <div class="title">全部文件</div>
+                                                        <div class="storage-info">
+                                                            <span rel-data="file_text">已用<em>39.54TB</em>/<em>86.72TB</em></span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div class="progress-bar" rel-data="file_length">
+                                                    <i class="picture" style="width: 0.0972%;"></i>
+                                                    <i class="doc" style="width: 0.0002%;"></i>
+                                                    <i class="software" style="width: 0.0031%;"></i>
+                                                    <i class="music" style="width: 0.0091%;"></i>
+                                                    <i class="video" style="width: 46.1811%;"></i>
+                                                    <i class="zip" style="width: 0.4689%;"></i>
+                                                    <i class="book" style="width: 0%;"></i>
+                                                    <i class="other" style="width: 0%;"></i>
+                                                </div>
+                                                <div class="file-type-tags">
+                                                    <span class="tag-item"><i class="dot music"></i>音频</span>
+
+                                                    <span class="tag-item"><i class="dot book"></i>书籍</span>
+
+                                                    <span class="tag-item"><i class="dot doc"></i>文档</span>
+
+                                                    <span class="tag-item"><i
+                                                            class="dot picture"></i>图片</span>
+
+                                                    <span class="tag-item"><i class="dot video"></i>视频</span>
+
+                                                    <span class="tag-item"><i
+                                                            class="dot software"></i>软件</span>
+
+                                                    <span class="tag-item"><i class="dot zip"></i>压缩包</span>
+
+                                                    <span class="tag-item"><i class="dot other"></i>其他</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </a>
+
+                                    <div class="file-module-block" id="js_filter_box_2"
+                                         style="display: none!important;">
+                                        <div class="item picture" menu="filter" val="2">
+                                            <div class="name">图片</div>
+                                            <div class="num">3.4万张</div>
+                                            <i class="bg"></i>
+                                        </div>
+                                        <div class="item doc" menu="filter" val="1">
+                                            <div class="name">文档</div>
+                                            <div class="num">180个</div>
+                                            <i class="bg"></i>
+                                        </div>
+                                        <div class="item link" style="display: none;">
+                                            <div class="name">网址（暂无）</div>
+                                            <div class="num"></div>
+                                            <i class="bg"></i>
+                                        </div>
+                                        <div class="item software" menu="filter" val="6">
+                                            <div class="name">软件</div>
+                                            <div class="num">38个</div>
+                                            <i class="bg"></i>
+                                        </div>
+                                        <div class="item music" menu="filter" val="3">
+                                            <div class="name">音频</div>
+                                            <div class="num">939首</div>
+                                            <i class="bg"></i>
+                                        </div>
+                                        <div class="item video" menu="filter" val="4">
+                                            <div class="name">视频</div>
+                                            <div class="num">1.7万部</div>
+                                            <i class="bg"></i>
+                                        </div>
+                                        <div class="item book" menu="filter" val="7">
+                                            <div class="name">书籍</div>
+                                            <div class="num"></div>
+                                            <i class="bg"></i>
+                                        </div>
+                                        <div class="item archive" menu="filter" val="5">
+                                            <div class="name">压缩包</div>
+                                            <div class="num">415个</div>
+                                            <i class="bg"></i>
+                                        </div>
+                                        <a href="//115.com/?tab=rb&amp;mode=wangpan">
+                                            <div class="item trash" menu="filter" val="recycle">
+                                                <div class="name">回收站</div>
+                                                <div class="num"></div>
+                                                <i class="bg"></i>
+                                            </div>
+                                        </a>
+                                        <div class="item download" style="display: none;">
+                                            <div class="name">已下载（暂无）</div>
+                                            <div class="num"></div>
+                                            <i class="bg"></i>
+                                        </div>
+                                    </div>
+
+                                    <div class="card-grid-nav" id="js_sub_nav_scroller">
+                                        <div class="grid-section">
+                                            <div class="section-title">常用</div>
+                                            <div class="grid-container">
+                                                <a href="javascript:;" data-nav="offline"
+                                                   rel_tab="offline" tab_btn="wangpan"
+                                                   mode-tab="offline" class="grid-item">
+                                                    <!-- <a href="javascript:;" rel="dump_f115_offline" class="grid-item"> -->
+                                                    <div class="item-icon clouddownload-icon"></div>
+                                                    <div class="item-title">云下载</div>
+                                                </a>
+                                                <a href="javascript:;" data-nav="upload"
+                                                   rel_tab="upload" tab_btn="wangpan"
+                                                   mode-tab="upload" class="grid-item">
+                                                    <!--  <a href="javascript:;" rel="dump_f115_upload" class="grid-item">-->
+                                                    <div class="item-icon uploads-icon"></div>
+                                                    <div class="item-title">最近上传</div>
+                                                </a>
+                                                <a href="javascript:;" data-nav="share_save_receive"
+                                                   rel_tab="share_save_receive" tab_btn="wangpan"
+                                                   mode-tab="share_save_receive" class="grid-item">
+                                                    <!-- <a href="javascript:;" rel="dump_f115_receive" class="grid-item">-->
+                                                    <div class="item-icon received-icon"></div>
+                                                    <div class="item-title">最近接收</div>
+                                                </a>
+                                                <a href="//life.115.com/lifetime?mode=lifeindex"
+                                                   data-nav="lifeindex" rel_tab="lifeindex"
+                                                   class="grid-item">
+                                                    <div class="item-icon operations-icon"></div>
+                                                    <div class="item-title">最近操作</div>
+                                                </a>
+                                                <a href="javascript:;" id="js_grid_nav_audio"
+                                                   class="grid-item">
+                                                    <div class="item-icon audio-icon"></div>
+                                                    <div class="item-title">我听</div>
+                                                </a>
+                                                <a href="javascript:;" id="js_grid_nav_video"
+                                                   class="grid-item">
+                                                    <div class="item-icon video-icon"></div>
+                                                    <div class="item-title">我看</div>
+                                                </a>
+                                                <a href="javascript:;" data-nav="star"
+                                                   rel_tab="star" tab_btn="wangpan"
+                                                   mode-data="{tab:'label',label_id:-1,show_label:1}"
+                                                   class="grid-item">
+                                                    <!-- <a href="javascript:;" rel="dump_f115_star" class="grid-item">-->
+                                                    <div class="item-icon star-icon"></div>
+                                                    <div class="item-title">星标文件</div>
+                                                </a>
+                                                <a href="javascript:;" data-nav="label"
+                                                   rel_tab="label" tab_btn="wangpan"
+                                                   class="grid-item" id="js_file_tags_toggle">
+                                                    <div class="item-icon filetags-icon"></div>
+                                                    <div class="item-title">文件标签</div>
+                                                </a>
+                                                <a href="javascript:;" data-nav="download"
+                                                   rel_tab="download" tab_btn="wangpan"
+                                                   mode-tab="download" class="grid-item"
+                                                   id="js_grid_nav_download">
+                                                    <div class="item-icon downloads-icon"></div>
+                                                    <div class="item-title">已下本地</div>
+                                                </a>
+                                                <a href="//115.com/?mode=share_save"
+                                                   data-nav="share_save" rel_tab="share_save"
+                                                   tab_btn="share_save" class="grid-item">
+                                                    <div class="item-icon shared-icon"></div>
+                                                    <div class="item-title">链接分享</div>
+                                                </a>
+                                                <a href="javascript:;" data-nav="together_share"
+                                                   rel_tab="together_share" tab_btn="share_save"
+                                                   mode-tab="together_share" class="grid-item">
+                                                    <!--  <a href="javascript:;" rel="dump_f115_familyshare" class="grid-item"> -->
+                                                    <div class="item-icon familyshare-icon"></div>
+                                                    <div class="item-title">家庭共享</div>
+                                                </a>
+                                                <a href="javascript:;" data-nav="rb" rel_tab="rb"
+                                                   mode-tab="rb" tab_btn="wangpan"
+                                                   class="grid-item">
+                                                    <!--  <a href="javascript:;" rel="dump_f115_recyclebin" class="grid-item"> -->
+                                                    <div class="item-icon recyclebin-icon"></div>
+                                                    <div class="item-title">回收站</div>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+
+
+                                    <div class="slide-labels-cell" id="js_slide_labels"
+                                         style="display: none;">
+                                        <div class="top" style="position:relative;">
+                                            <div class="left-tvh">
+                                                <span>标签</span>
+
+                                                <a href="javascript:;" rel="toggle_list" class="opt"
+                                                   style="position: relative">
+                                                    <i class="icon-opt-little iol-focus"></i>
+
+                                                </a>
+                                                <a href="javascript:;" class="opt"
+                                                   style="margin-left: 5px;" btn="sort_btn"><i
+                                                        class="icon-opt-little iol-down"></i></a>
+                                                <div class="common-little-pop-wheat"
+                                                     style=" left:17px; bottom:30px">
+                                                    <i class="arrow" style="left: 10px; "></i>
+                                                    <span style="font-size: 12px;white-space: nowrap;"></span>
+                                                </div>
+                                            </div>
+                                            <div class="side">
+                                                <a href="javascript:;" btn="add_label">添加</a>
+
+                                                <a id="more_btn" href="javascript:;"
+                                                   style="display: inline;">更多</a>
+                                            </div>
+                                            <div class="common-little-pop-wheat"
+                                                 style="left: 90px;bottom: 30px;">
+                                                <i class="arrow" style="right: 10px; "></i>
+                                                <span style="font-size: 12px;white-space: nowrap;"></span>
+                                            </div>
+                                            <div class="context-menu" rel="sort_box"
+                                                 style="left: 0px; top:30px; display: none;">
+                                                <div class="cell-icon">
+                                                    <a href="javascript:;" rel="sort_item"
+                                                       sort="update_time" order="desc"
+                                                       class="current"><i
+                                                            class="icon-filter if-time-asc"></i><span>修改时间倒序</span></a>
+                                                    <a href="javascript:;" rel="sort_item"
+                                                       sort="update_time" order="asc"><i
+                                                            class="icon-filter if-time-desc"></i><span>修改时间正序</span></a>
+                                                    <a href="javascript:;" rel="sort_item"
+                                                       sort="create_time" order="asc"><i
+                                                            class="icon-filter if-add-asc"></i><span>添加时间正序</span></a>
+                                                    <a href="javascript:;" rel="sort_item"
+                                                       sort="create_time" order="desc"><i
+                                                            class="icon-filter if-add-desc"></i><span>添加时间倒序</span></a>
+                                                    <a href="javascript:;" rel="sort_item"
+                                                       sort="name" order="asc"><i
+                                                            class="icon-filter if-name-asc"></i><span>A-Z排序</span></a>
+                                                    <a href="javascript:;" rel="sort_item"
+                                                       sort="name" order="desc"><i
+                                                            class="icon-filter if-name-desc"></i><span>Z-A排序</span></a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="box" rel="list">
+                                            <div class="slc-item" label="1935097358384703669"
+                                                 label_color="" label_name="个人"
+                                                 item="label_item_wrap"><i
+                                                    class="icon-labels-sbar ils-personal"></i><span>个人</span>
+                                                <div box="more_btn" class="more-box"><a
+                                                        btn="more_btn" href="javascript:;"><i
+                                                        class="ibco-more"></i></a></div>
+                                            </div>
+                                            <div class="slc-item" label="1935097358367926452"
+                                                 label_color="" label_name="工作"
+                                                 item="label_item_wrap"><i
+                                                    class="icon-labels-sbar ils-work"></i><span>工作</span>
+                                                <div box="more_btn" class="more-box"><a
+                                                        btn="more_btn" href="javascript:;"><i
+                                                        class="ibco-more"></i></a></div>
+                                            </div>
+                                            <div class="slc-item" label="1935097358409869495"
+                                                 label_color="#F78C26" label_name="橙色"
+                                                 item="label_item_wrap"><i
+                                                    class="icon-labels il-orange"></i><span>橙色</span>
+                                                <div box="more_btn" class="more-box"><a
+                                                        btn="more_btn" href="javascript:;"><i
+                                                        class="ibco-more"></i></a></div>
+                                            </div>
+                                            <div class="slc-item" label="1935097358468589756"
+                                                 label_color="#CCCCCC" label_name="灰色"
+                                                 item="label_item_wrap"><i
+                                                    class="icon-labels il-gray"></i><span>灰色</span>
+                                                <div box="more_btn" class="more-box"><a
+                                                        btn="more_btn" href="javascript:;"><i
+                                                        class="ibco-more"></i></a></div>
+                                            </div>
+                                        </div>
+                                        <div class="popup-moretags" id="more_label_box"
+                                             style="display: none; left: 375px; max-width: 516px; z-index: 999999999; width: 516px;">
+                                            <ul>
+                                                <li class="slc-item">
+                                                    <div class="cont" label="1935097358460201147"
+                                                         label_color="#8B69FE" label_name="紫色"
+                                                         item="label_item_wrap"><i
+                                                            class="icon-labels il-purple"></i><span>紫色</span>
+                                                        <div class="side"><a
+                                                                href="javascript:void(0);"
+                                                                btn="edit_btn" index="0"><i
+                                                                class="icon-labels-opt ilo-edit"></i></a>
+                                                            <a href="javascript:void(0);"
+                                                               btn="del_btn"><i
+                                                                    class="icon-labels-opt ilo-del"></i></a>
+                                                            <div class="common-little-pop-wheat clpw-bottom"
+                                                                 　undefined=""
+                                                                 style="left:-10px; left: -40px; top: 40px; width:52px;"
+                                                                 id="undefined"><i class="arrow"
+                                                                                   style="right: 10px; left: 44px;"></i><span
+                                                                    style="color: #B06B0B; padding-left: 0px">编辑标签</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </li>
+                                                <li class="slc-item">
+                                                    <div class="cont" label="1935097358393092278"
+                                                         label_color="#FF4B30" label_name="红色"
+                                                         item="label_item_wrap"><i
+                                                            class="icon-labels il-red"></i><span>红色</span>
+                                                        <div class="side"><a
+                                                                href="javascript:void(0);"
+                                                                btn="edit_btn" index="1"><i
+                                                                class="icon-labels-opt ilo-edit"></i></a>
+                                                            <a href="javascript:void(0);"
+                                                               btn="del_btn"><i
+                                                                    class="icon-labels-opt ilo-del"></i></a>
+                                                            <div class="common-little-pop-wheat clpw-bottom"
+                                                                 　undefined=""
+                                                                 style="left:-10px; left: -40px; top: 40px; width:52px;"
+                                                                 id="undefined"><i class="arrow"
+                                                                                   style="right: 10px; left: 44px;"></i><span
+                                                                    style="color: #B06B0B; padding-left: 0px">编辑标签</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </li>
+                                                <li class="slc-item">
+                                                    <div class="cont" label="1935097358435035321"
+                                                         label_color="#43BA80" label_name="绿色"
+                                                         item="label_item_wrap"><i
+                                                            class="icon-labels il-green"></i><span>绿色</span>
+                                                        <div class="side"><a
+                                                                href="javascript:void(0);"
+                                                                btn="edit_btn" index="2"><i
+                                                                class="icon-labels-opt ilo-edit"></i></a>
+                                                            <a href="javascript:void(0);"
+                                                               btn="del_btn"><i
+                                                                    class="icon-labels-opt ilo-del"></i></a>
+                                                            <div class="common-little-pop-wheat clpw-bottom"
+                                                                 　undefined=""
+                                                                 style="left:-10px; left: -40px; top: 40px; width:52px;"
+                                                                 id="undefined"><i class="arrow"
+                                                                                   style="right: 10px; left: 44px;"></i><span
+                                                                    style="color: #B06B0B; padding-left: 0px">编辑标签</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </li>
+                                                <li class="slc-item">
+                                                    <div class="cont" label="1935097358451812538"
+                                                         label_color="#2670FC" label_name="蓝色"
+                                                         item="label_item_wrap"><i
+                                                            class="icon-labels il-blue"></i><span>蓝色</span>
+                                                        <div class="side"><a
+                                                                href="javascript:void(0);"
+                                                                btn="edit_btn" index="3"><i
+                                                                class="icon-labels-opt ilo-edit"></i></a>
+                                                            <a href="javascript:void(0);"
+                                                               btn="del_btn"><i
+                                                                    class="icon-labels-opt ilo-del"></i></a>
+                                                            <div class="common-little-pop-wheat "
+                                                                 　undefined=""
+                                                                 style="left:-10px; left: -40px; top: -40px; width:52px;"
+                                                                 id="undefined"><i class="arrow"
+                                                                                   style="right: 10px; left: 44px;"></i><span
+                                                                    style="color: #B06B0B; padding-left: 0px">编辑标签</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </li>
+                                                <li class="slc-item">
+                                                    <div class="cont" label="1935097358426646712"
+                                                         label_color="#FFC032" label_name="黄色"
+                                                         item="label_item_wrap"><i
+                                                            class="icon-labels il-yellow"></i><span>黄色</span>
+                                                        <div class="side"><a
+                                                                href="javascript:void(0);"
+                                                                btn="edit_btn" index="4"><i
+                                                                class="icon-labels-opt ilo-edit"></i></a>
+                                                            <a href="javascript:void(0);"
+                                                               btn="del_btn"><i
+                                                                    class="icon-labels-opt ilo-del"></i></a>
+                                                            <div class="common-little-pop-wheat "
+                                                                 　undefined=""
+                                                                 style="left:-10px; left: -40px; top: -40px; width:52px;"
+                                                                 id="undefined"><i class="arrow"
+                                                                                   style="right: 10px; left: 44px;"></i><span
+                                                                    style="color: #B06B0B; padding-left: 0px">编辑标签</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="sub-hflow-adjust">
+                            <a href="javascript:;" class="btn-adjust-fold" btn="left_hide_btn">
+                                <i class="icon-adjust-arrow"></i>
+                                <span>收起</span>
+                            </a>
+                            <a href="javascript:;" class="btn-adjust-expand">
+                                <i class="icon-adjust-arrow"></i>
+                                <span>展开</span>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="main-hflow main-scrollbox">
+                        <div class="frame-container main-view-width" id="js_iframes_box" style="">
+                            <div rel="iframes" id="js_center_main_box">
+                                <iframe rel="wangpan" name="wangpan"
+                                        src="https://115.com/?ct=file&amp;ac=userfile&amp;tpl=view_large&amp;s=0&amp;is_wl_tpl=1&amp;aid=1&amp;cid=739884770980370058&amp;offset=0&amp;limit=24&amp;tab="
+                                        frameborder="0"
+                                        style="position: absolute; top: 0px;"></iframe>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="js_cloud_nav" class="cloud-nav-container" style="display: none;">
+
+                    <!-- !云导航 -->
+                    <div class="cloud-nav-wrap">
+                        <div class="cloud-nav-column">
+                            <div class="cell">
+                                <a href="javascript:;" class="cnvc-file" tab_btn="wangpan"
+                                   mode-url="/?ct=file&amp;ac=userfile&amp;is_wl_tpl=1"><i></i><span>文件</span></a>
+                            </div>
+                            <div class="cell">
+                                <a href="javascript:;" class="cnvc-photo" tab_btn="wangpan"
+                                   mode-tab="photo"><i></i><span>相册</span></a>
+                                <a href="javascript:;" class="cnvc-contact"
+                                   tab_btn="mobile_contact"><i></i><span>通讯录</span></a>
+                            </div>
+                            <div class="cell">
+                                <a href="javascript:;" class="cnvc-recent" tab_btn="wangpan"
+                                   mode-url="/?ct=file&amp;ac=userfile&amp;is_wl_tpl=1&amp;show_recive=1"><i></i><span>最近</span></a>
+                                <a href="javascript:;" class="cnvc-note"
+                                   tab_btn="note"><i></i><span>记事</span></a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!--//-->
+                    <div class="footer" style="display:none;">
+                        <a target="_blank"
+                           href="//115.com/?url=%2Fc-115-1456742904-all-0-0-0.html&amp;mode=q">关于115</a>
+                        <em>|</em>
+                        <a target="_blank"
+                           href="//115.com/?url=%2Fc-115-1457185191-all-0-0-0.html&amp;mode=q">加入115</a>
+                        <em>|</em>
+                        <a target="_blank" href="//115.com/privacy.html">隐私政策</a>
+                        <em>|</em>
+                        <a target="_blank" href="//115.com/copyright.html">版权声明</a>
+                        <em>|</em>
+                        <a id="js_client_btn" href="javascript:;">下载客户端</a>
+                        <em>|</em>
+                        <a target="_blank" href="//115.com/?ct=report"
+                           class="highlight">扫黄打非</a>
+                        <i>•</i>
+                        <a href="https://115.com/?ct=report&amp;jw=1" target="_blank" rel="nofollow"
+                           class="highlight">净网2026</a>
+                    </div>
+
+                </div>
+
+
+            </div>
+            <div class="view-width" frame-data="" gray="1" style="display: none;">
+                <!-- 频道：一生 -->
+                <div class="main-master">
+                    <div class="wrap-hflow">
+                        <div class="wrap-hflow">
+                            <div class="frame-container page-container">
+                                <div>
+                                    <iframe rel="life" src="about:blank" frameborder="0"
+                                            style="position: absolute; top: 0; display: none;"></iframe>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+            </div>
+            <div class="view-width" frame-data="" gray="1" style="display: none;">
+                <!-- 频道：我的 -->
+                <div class="main-master">
+                    <div class="wrap-hflow">
+                        <!-- 个人资料栏 -->
+                        <script type="text/javascript">
+                            CommonHeader.writePersonalCard()
+                        </script>
+                        <div class="sub-hflow " id="js-common-header-personal-card">
+                            <div class="sub-hflow-container">
+                                <div class="sub-hflow-mine">
+                                    <div class="oldmine-vip-card ">
+                                        <i class="sign-vipmedal-card" title="年费VIP">年费VIP</i>
+                                        <div class="vip-card-head">
+                                            <a href="javascript:;">
+                                                <div class="head"><img
+                                                        src="https://avatars.115.com/01/mjonu_m.jpg?_t=1784746105"
+                                                        alt=""></div>
+                                                <strong class="name">键盘男</strong>
+                                                <p class="info">115账号_21979215</p>
+                                            </a>
+                                        </div>
+                                        <div class="vip-card-center">
+                                            <a href="//vip.115.com/?c=1&amp;bus_type=common"
+                                               class="renew-fee-btn" target="_top" rel="upgrade"
+                                               style=""><span>续费</span></a>
+                                            <div class="side">
+                                                <strong class="vip-card-type">年费VIP<a
+                                                        href="javascript:;" class="btn-link"
+                                                        rel="switch" style="display: none">切换</a></strong>
+                                                <span class="time" rel="vip_time">2035-10-03 22:30(周三)过期</span>
+                                            </div>
+                                        </div>
+
+                                        <a href="//115.com/?mode=device_manage"
+                                           class="log-device"><span>账号登录在2个终端</span><i></i></a>
+
+                                        <div class="vip-card-space" rel="space_size_card" style="">
+                                            <div class="bar">
+                                                <i><b rel="space_size_proc" style="width: 45%;"></b></i>
+                                            </div>
+                                            <div class="size" rel="space_size">已用<em
+                                                    style="margin-left:2px;">39.54TB</em>/86.72TB
+                                            </div>
+                                            <a href="//vip.115.com/?c=26" target="_top"
+                                               class="link"><span>扩容</span></a>
+                                        </div>
+                                    </div>
+                                    <div mod="wallet"></div>
+                                    <div class="mine-service-card" style="display:none">
+                                        <div class="name">服务</div>
+                                        <div class="msc-cont">
+                                            <a href="//vip.115.com/forever/info/" class="item"
+                                               style="display: none;" rel="forever_count">
+                                                <i></i>
+                                                <span>附号</span>
+                                            </a>
+                                            <a href="//vip.115.com/order/mycoupon/?t=vip"
+                                               class="item" style="display: none;" rel="vip_count">
+                                                <i></i>
+                                                <span>VIP券</span>
+                                            </a>
+                                            <a href="//vip.115.com/order/mycoupon/?t=space"
+                                               class="item" style="display: none;"
+                                               rel="space_count">
+                                                <i></i>
+                                                <span>空间卡</span>
+                                            </a>
+                                            <a href="javascript:;" class="item"
+                                               style="display: none;" rel="num">
+                                                <i></i>
+                                                <span>云卡</span>
+                                            </a>
+                                            <a href="//pay.115.com/" class="item"
+                                               style="display: none;" rel="00_balance">
+                                                <i></i>
+                                                <span>枫币</span>
+                                            </a>
+                                            <a href="//vip.115.com/sqcode/index/" class="item"
+                                               style="display: none;" rel="sqcode_count">
+                                                <i></i>
+                                                <span>社区码</span>
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <div class="mine-job-card">
+                                        <div class="top">
+                                            <div class="name">找工作</div>
+                                            <a href="//job.115.com/position/company"
+                                               class="enter"><span>进入</span><i class="arrow"></i></a>
+                                        </div>
+                                        <div class="cont">
+                                            <div class="job-box">
+                                                <a href="//job.115.com/position/collect?type=company"
+                                                   class="item">
+                                                    <i class="icon-job-module ijm-company"></i>
+                                                    <span>星标企业</span>
+                                                </a>
+                                                <a href="//job.115.com/position/collect?type=job"
+                                                   class="item">
+                                                    <i class="icon-job-module ijm-position"></i>
+                                                    <span>星标岗位</span>
+                                                </a>
+                                                <a href="//job.115.com/user_resume/cloud_resume_manage"
+                                                   class="item">
+                                                    <i class="icon-job-module ijm-resume"></i>
+                                                    <span>应聘材料</span>
+                                                </a>
+                                                <a href="//job.115.com/position/company?action=my_post"
+                                                   class="item">
+                                                    <i class="icon-job-module ijm-send"></i>
+                                                    <span>我的投递</span>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div mod="point"></div>
+                                    <div class="file-menu-nav">
+                                        <div class="item" nav="m_profile">
+                                            <i class="icon-nv-file inf-person"></i>
+                                            <div open_url="//115.com/?mode=my_set" class="cont">
+                                                <div class="name">个人资料</div>
+                                                <div class="info">网名、头像、签名、邮箱、收货地址等
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="item" nav="m_account">
+                                            <i class="icon-nv-file inf-safe"></i>
+                                            <div open_url="//115.com/?nav=safe&amp;mode=my_set"
+                                                 class="cont">
+                                                <div class="name">账号安全</div>
+                                                <div class="info">密码、手机、指纹、隐私、退出登录等
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="sub-hflow-adjust">
+                                <a href="javascript:;" mod="collapse" class="btn-adjust-fold">
+                                    <i class="icon-adjust-arrow"></i>
+                                    <span>收起</span>
+                                </a>
+                                <a href="javascript:;" mod="expend" class="btn-adjust-expand">
+                                    <i class="icon-adjust-arrow"></i>
+                                    <span>展开</span>
+                                </a>
+                            </div>
+                        </div>
+                        <!--//-->
+                        <div class="wrap-hflow">
+                            <div class="frame-container page-container">
+                                <iframe rel="me" src="about:blank" frameborder="0"
+                                        style="position: absolute; top: 0; display: none;"></iframe>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="view-width" frame-data="" gray="1" style="display: none;">
+
+                <!-- 频道：一生 -->
+                <div class="main-master">
+                    <div class="wrap-hflow">
+                        <div class="wrap-hflow">
+                            <div class="frame-container bg-gray">
+                                <div style="height: 100%">
+                                    <iframe rel="other" src="about:blank" frameborder="0"
+                                            style="position: static; display: none;"></iframe>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!--//-->
+<!-- !客户端下载 -->
+<div id="js_client_download_box" class="client-popup-download" style="display: none;">
+    <a href="javascript:;" class="close">关闭</a>
+    <s class="arrow"></s>
+    <div class="mobile-client">
+        <div class="mob-cli-cell">
+            <s class="qr-cli-cloud"></s>
+            <span>115 App下载</span>
+        </div>
+        <div class="mob-cli-cell">
+            <s class="qr-cli-office"></s>
+            <span>115管理 App下载</span>
+        </div>
+    </div>
+    <div class="other-client">
+        <a href="http://pc.115.com" target="_blank"><s
+                class="ocli-pc"></s><span>115浏览器</span></a>
+        <a href="http://pc.115.com/tv.html" target="_blank"><s class="ocli-tv"></s><span>大屏</span></a>
+    </div>
+</div>
+<!--//-->
+
+
+<script type="text/javascript"
+        src="//cdnres.115.com/site/static/plug/main_2016/index.js?_vh=0fefe2f_92"></script>
+<!--密码等级2.5-->
+
+
+<script type="text/javascript">
+    $(function(){
+
+        var $diskMenuSearch = $('<div class="top-search-menu">'+
+                                    '<a href="javascript:;" data-search="disk"><s class="itsm-root"></s><span>全盘搜索</span></a>'+
+                                    '<a href="javascript:;" data-search="cid"><s class="itsm-folder"></s><span>当前目录搜索</span></a>'+
+                                '</div>');
+
+        var $search_box = $('#js-ch-search_box'),
+            focusTime;
+        var getAidCid = function(){
+            try{
+                var main = Ext.CACHE.FileMain;
+                return main.Setting.GetActive();
+            }catch(e){
+                return {cid:0}
+            }
+        }
+        var setMenuSearch = function(){
+            var $this = $('#js-ch-search_ipt'),
+                value = $.trim( $this.val() ),
+                ac = getAidCid();
+            var mode = oofUtil.getQueryParamByKey('mode') || '',
+                search_value = oofUtil.getQueryParams('search_value') || '';
+            if(value.length && mode == 'wangpan' && ac.cid != 0) {
+                /*$search_box.after($diskMenuSearch.show());
+                if(!$diskMenuSearch.find('.hover').length) {
+                    $diskMenuSearch.find('[data-search="disk"]').addClass('hover');
+                }*/
+            }else {
+                $diskMenuSearch.hide().find('.hover').removeClass('hover');
+            }
+        }
+
+        $diskMenuSearch.on('click','[data-search]', function(){
+            $diskMenuSearch.hide().find('.hover').removeClass('hover');
+            $(this).addClass('hover');
+            $('#js-ch-search_btn').trigger('click');
+        })
+
+        $('#js-ch-search_ipt').keydown(function(e){
+            if(e.keyCode==13){
+                $('#js-ch-search_btn').click();
+            }
+            if($diskMenuSearch.is(':visible')) {
+                if(e.keyCode == 38 || e.keyCode == 40) {
+                    var $hover = $diskMenuSearch.find('.hover');
+                    if(!$hover.length) {
+                        $hover = $diskMenuSearch.find('[data-search="disk"]').addClass('hover');
+                    }
+                    var old_hover = $hover.attr('data-search');
+                    $diskMenuSearch.find('[data-search="'+(old_hover ==  'disk' ? 'cid' : 'disk' )+'"]').addClass('hover')
+                    $hover.removeClass('hover');
+                    return false;
+                }
+            }
+        }).keyup(setMenuSearch).on('blur', function(){
+            focusTime && clearTimeout(focusTime);
+            focusTime = setTimeout(function(){
+                $diskMenuSearch.hide().find('.hover').removeClass('hover');
+            },200)
+        })
+        $('#js-ch-search_btn').click(function(){
+            var v = $.trim($('#js-ch-search_ipt').val());
+            if(window.USER_ID){
+
+                if(!v){
+                    $.alertTip('请输入搜索内容');
+                    return false;
+                }
+
+                if(!USER_INFO.IS_VIP && v.length==1){
+                    $.alertTip('输入的内容不能少于2个字符');
+                    return false;
+                }
+
+
+                var params = oofUtil.getQueryParams(location.href);
+                if(params['mode'] == 'home') {
+                    var type = 4,
+                        _params;
+                    if(params['url']) {
+                        params['url'] = decodeURIComponent(params['url']);
+                        _params = oofUtil.getQueryParams(params['url']);
+                        if(_params && _params['home_type'] == 5) {
+                            type = 5;
+                        }
+                    }
+                    oofUtil.urlMaintain.changeMode('home', {url:'/home?home_type='+type+'&keyword='+encodeURIComponent(v)});
+                }else {
+                    var diskType = 'disk';
+                    if($diskMenuSearch.is(':visible')) {
+                        var $hover = $diskMenuSearch.find('.hover');
+                        diskType = $hover.length ? $hover.attr('data-search') : 'disk';
+                        $diskMenuSearch.hide().find('.hover').removeClass('hover');
+                        $('#js-ch-search_ipt').trigger('blur');
+                    }
+
+                    if(diskType == 'disk') {
+                        oofUtil.urlMaintain.changeMode('wangpan', {url:'/?aid=-1&search_value='+encodeURIComponent(v)+'&ct=file&ac=search&is_wl_tpl=1'});
+                    }else {
+                        var ac = getAidCid();
+                        oofUtil.urlMaintain.changeMode('wangpan', {url:'/?aid='+ac.aid+'&cid='+ac.cid+'&search_value='+encodeURIComponent(v)+'&ct=file&ac=search&is_wl_tpl=1'});
+                    }
+                }
+            }else{
+                oofUtil.urlMaintain.changeMode('login');
+            }
+            return false;
+        });
+        $('#js-ch-search_cln').click(function(){
+            $('#js-ch-search_ipt').val('');
+            var params = oofUtil.getQueryParams(location.href);
+            if(params['mode'] == 'home') {
+                oofUtil.urlMaintain.changeMode('home');
+            }else if(params['mode'] == 'wangpan') {
+                try{ //清空输入框时优先清空aid、cid
+                    var data = getAidCid()
+                    data.aid='1';
+                    data.cid='';
+                }catch(e){
+
+                }
+                oofUtil.urlMaintain.changeMode('wangpan');
+            }
+            return false;
+        })
+      /*  try{
+            var params = oofUtil.getQueryParams(location.href)
+            var action = params.open,
+                p_pages = params.from
+                gid = params.gid;
+            if($.inArray(action, ['superpwd','bind_mobile','forgot_superpwd']) != -1){
+                if(p_pages != undefined){
+                    action += ('&from='+p_pages+'&gid='+gid)
+                }
+                if(action == 'forgot_superpwd' && '1023' == '1048575' && '13570506303' == ''){
+                    action = 'superpwd'
+                }
+                if (action == 'superpwd' && '1023' != '1048575' && '44f64e3ba7eeb136e06aa0ba58c24a45' != '') {
+                    action = 'forgot_superpwd';
+                }
+                if(window.showAccountDG){
+                    window.showAccountDG(0,action);
+                }else{
+                    $.getScript('//cdnres.115.com/site/static/style_v9.0/js/common.accountDG.js',function(){
+                        window.showAccountDG(0,action);
+                    })
+                }
+                oofUtil.urlMaintain.resetUrl('index',null,document.title)
+            }
+        }catch(e){}*/
+
+    })
+</script>
+
+<div class="article-reader" id="js-home_detail_page" style="display: none;">
+    <iframe src="about:blank" frameborder="0"></iframe>
+</div>
+
+<!--//内容区域-->
+<div id="js_detail_iframe_box" class="article-reader" style="display: none;">
+    <iframe src="about:blank" allowfullscreen="allowfullscreen"
+            webkitallowfullscreen="webkitallowfullscreen" id="js_detail_iframe"
+            frameborder="0"></iframe>
+</div>
+
+<script type="text/javascript">
+    ;(function(){
+        var cache={
+            $box:$('#js-home_detail_page')
+        }
+        window.HomeDetailPageGM={
+            saveListPageUrl:function(){
+                cache.lastListPage={
+                    url:location.href,
+                    title:document.title
+                }
+            },
+            showDetailPage:function(url){
+                cache.$box.children('iframe').off("load.detail").on('load.detail', function () {
+                    var ifr = this;
+                    var win = ifr.contentWindow || ifr.window;
+                    try {
+                        $(win).focus();
+                    } catch (e) {
+                    }
+                    try {
+                        $(win.document).on('keydown', function (e) {
+                            if (e.keyCode == 27) {
+                                if (!$(e.target).is('input,textarea')) {
+                                    HomeDetailPageGM.closeDetailPage();
+                                    return false;
+                                }
+                            }
+                        });
+                    } catch (e) {
+                    }
+                });
+                if (url.indexOf('frame_view') == -1) {
+                    if (url.indexOf('?') == -1) {
+                        url += '?';
+                    } else {
+                        url += '&'
+                    }
+                    url += 'frame_view=1';
+                }
+                cache.$box.show()
+                    .children('iframe').attr('src', url);
+            },
+            closeDetailPage:function(){
+                cache.$box.hide()
+                    .children('iframe').off("load.detail").attr('src','about:blank');
+                if(cache.lastListPage && cache.lastListPage.url){
+                    history.pushState(null, cache.lastListPage.title, cache.lastListPage.url);
+                }else{
+                }
+
+            }
+        };
+        $(document).on('keydown', function (e) {
+            if (e.keyCode == 27) {
+                if (cache.$box.is(':visible') && !$(e.target).is('input,textarea')) {
+                    HomeDetailPageGM.closeDetailPage();
+                    return false;
+                }
+            }
+        })
+        window.HomeDetailPageGM.saveListPageUrl();
+
+
+        $(function () {
+            var mode = oofUtil.getQueryParamByKey('mode');
+            if(mode == 'pan_set') {
+                top.oofUtil.urlMaintain.changeMode('wangpan');
+                top.Core.FrameDG.Open('/?ac=setting&is_wl_tpl=1&pop=1', {
+                    width: 700, height: 430, title: '偏好设置'
+                });
+            }
+        })
+
+    }());
+</script>
+<script></script>
+
+<script src="//cdnres.115.com/www/static/api/module_simple/module.js"></script>
+<script type="text/javascript">
+    (function (){
+        if (document.location.protocol == 'http:') {
+            //window.tjj = window.tjj || {};tjj.siteid = '10281';tjj.jsurl =  tjj.jsurl || 'http://static.115img.com/static/115tj.js?v=1.0';(function (){var tj = document.createElement('script'); tj.type = 'text/javascript'; tj.src = tjj.jsurl;var tp = document.getElementsByTagName('script')[0]; tp.parentNode.insertBefore(tj,tp);})();
+        }
+    })();
+    // &ZeroWidthSpace;增加信息指纹功能,截屏时的信息功能
+    oofUtil.addMessageBg("//webapi.115.com/user/fingerprint");
+</script>
+<div style="display:none;">
+    <script type="text/javascript">
+        document.write(unescape("%3Cspan id='cnzz_stat_icon_1279056547'%3E%3C/span%3E%3Cscript src='https://s9.cnzz.com/z_stat.php%3Fid%3D1279056547' type='text/javascript'%3E%3C/script%3E"));
+    </script>
+    <span id="cnzz_stat_icon_1279056547"></span>
+    <script src="https://s9.cnzz.com/z_stat.php?id=1279056547" type="text/javascript"></script>
+</div>
+
+<div id="js_upload_ui_box1784746105199" style="display:none;" class="drop-box-shadow"><i></i></div>
+<div style="overflow: hidden;width: 1px;height: 1px;position: absolute;left: -999px;top:-999px;">
+    <iframe src="//115.com/static/cross.html" ref="oofCrossIframe" id="backUpWindow"
+            frameborder="0"></iframe>
+</div>
+<div id="js_ll_label_menu" class="context-menu" style="display:none ">
+    <div class="cell-icon">
+        <a href="javascript:;" class="" btn="edit_btn"><i
+                class="icon-operate ifo-edit"></i><span>编辑</span></a>
+        <a href="javascript:;" class="" btn="del_btn"><i class="icon-operate ifo-remove"></i><span>删除</span></a>
+    </div>
+</div>
+<div style="height:1px;overflow:hidden;position:absolute;width:1px;left:-999px;top:-999px;">
+    <iframe src="//q.115.com/bridge_assets.html?cb_key=iframe_cb_key__1784746105337_0&amp;_t1784746105337"></iframe>
+</div>
+<div style="" class="feature-float" id="js_common_mini-dialog"><img ref="img"
+                                                                    src="https://cdnimg.115.com/67013663bdc62f051bb63c68fd6b3d5b/6A611079/69f37dc8c7682d040ac0678ef6492e8deda03437_360_360"
+                                                                    alt="" width="115px"> <a
+        ref="href" href="https://115.com/life/shopping/mall?f=ad2#" target="_top"> <s ref="text">你的回忆
+    · 一直都存在</s> </a> <a href="javascript:;" rel="close" class="close"></a></div>
+<div style="height:1px;overflow:hidden;position:absolute;width:1px;left:-999px;top:-999px;">
+    <iframe src="//cdnassets.115.com/bridge.html?_=1778316111444"></iframe>
+</div>
+<div style="height:1px;overflow:hidden;position:absolute;width:1px;">
+    <iframe src="https://webapi.115.com/bridge_2.0.html?namespace=Core.DataAccess&amp;api=UDataAPI&amp;_t=v5"></iframe>
+</div>
+<div id="js_float_content" class="context-menu menu-upward"
+     style="z-index: 9999999; top: 185px; left: 723px; display: none;">
+    <div class="cell-icon">
+        <ul>
+            <li val="upload" style="display: none;"><a href="javascript:;"><i
+                    class="icon-operate ifo-upload"></i><span>上传文件</span></a></li>
+            <li val="add_dir" style="display: none;"><a href="javascript:;"><i
+                    class="icon-operate ifo-newdir"></i><span>新建文件夹</span></a></li>
+            <li val="copy_paste" style="display: none;"><a href="javascript:;">粘贴文件</a></li>
+        </ul>
+    </div>
+</div>
+<div style="z-index: 9000000; background: none 0px 0px repeat scroll black; height: 100%; left: 0px; position: fixed; top: 0px; width: 100%; opacity: 0; display: none;"
+     onselectstart="return false;"></div>
+</body>
+</html>
