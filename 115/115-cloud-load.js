@@ -516,13 +516,13 @@ async function submitRename(page, newTitle) {
   return true;
 }
 
-/** 选中目录内文件名不包含完整番号或其字母、数字部分的文件。 */
-async function selectNonBangouFiles(innerList, bangou) {
+/** 收集目录内文件名不包含完整番号或其字母、数字部分的文件 ID。 */
+async function collectNonBangouFileIds(innerList, bangou) {
   const items = innerList.locator(':scope > li');
   const count = await items.count();
   const bangouLower = bangou.toLowerCase();
   const parts = bangou.split('-');
-  let selectedCount = 0;
+  const fileIds = [];
 
   for (let index = 0; index < count; index += 1) {
     const item = items.nth(index);
@@ -543,89 +543,17 @@ async function selectNonBangouFiles(innerList, bangou) {
       continue;
     }
 
-    console.log(`li_title=${title} 选中`);
-    await item.evaluate((element) => {
-      element.className = 'selected';
-    });
-    selectedCount += 1;
-  }
-
-  return selectedCount;
-}
-
-/** 删除已选中的文件，并在确认对话框中完成操作。 */
-async function deleteSelectedFiles(page, frame, selectedCount) {
-  if (selectedCount <= 0) {
-    return;
-  }
-
-  const operateBox = frame.locator('#js_operate_box').first();
-  if (!(await operateBox.count())) {
-    return;
-  }
-
-  await operateBox.evaluate((element) => {
-    element.style.left = '170px';
-    if (element.style.display) {
-      element.style.display = 'flex';
+    const fileId = (await item.getAttribute('file_id') || '').trim();
+    if (!fileId) {
+      console.log(`li_title=${title} 缺少有效的 file_id，跳过删除`);
+      continue;
     }
-  });
-  await sleep(200);
 
-  let deleteButton = operateBox.locator('li[menu="delete"] a').first();
-  if (!(await deleteButton.count())) {
-    deleteButton = operateBox.locator('li[menu="delete"]').first();
-  }
-  if (!(await deleteButton.count())) {
-    console.log('未找到删除按钮');
-    return;
+    console.log(`li_title=${title}, file_id=${fileId} 加入删除列表`);
+    fileIds.push(fileId);
   }
 
-  try {
-    await deleteButton.evaluate((element) => {
-      element.scrollIntoView({ block: 'center' });
-    });
-    await sleep(200);
-  } catch {
-    // Scrolling is only a best-effort step.
-  }
-
-  await deleteButton.click({ force: true });
-  await sleep(2000);
-
-  const confirmSelectors = [
-    'div.dialog-box.window-current a.dgac-confirm[btn="confirm"]',
-    'xpath=//div[contains(@class,"dialog-box") and contains(@class,"window-current")]//a[@btn="confirm"]',
-    'xpath=//div[contains(@class,"dialog-box") and contains(@class,"window-current")]//a[normalize-space(text())="确定"]',
-  ];
-  let confirmButton = null;
-
-  for (const selector of confirmSelectors) {
-    confirmButton = await findLocatorInFrames(page, selector, {
-      timeout: 1500,
-      visible: true,
-    });
-    if (confirmButton) {
-      break;
-    }
-  }
-
-  if (!confirmButton) {
-    console.log('未找到确认按钮（当前文档与 top 文档均未命中）');
-    return;
-  }
-
-  try {
-    await confirmButton.locator.evaluate((element) => {
-      element.scrollIntoView({ block: 'center' });
-    });
-    await sleep(200);
-  } catch {
-    // Scrolling is only a best-effort step.
-  }
-
-  await confirmButton.locator.click({ force: true });
-  console.log(`已删除 ${selectedCount} 个不含番号的文件`);
+  return fileIds;
 }
 
 /** 在当前目录中查找并删除不符合番号规则的文件。 */
@@ -647,8 +575,19 @@ async function cleanupNonBangouFilesInDir(page, bangou) {
     return;
   }
 
-  const selectedCount = await selectNonBangouFiles(innerList, bangou);
-  await deleteSelectedFiles(page, listContainer.frame, selectedCount);
+  const fileIds = await collectNonBangouFileIds(innerList, bangou);
+  if (fileIds.length === 0) {
+    console.log('没有需要通过 API 删除的不含番号文件');
+    return;
+  }
+
+  const response = await requestCookieApi(
+    'POST',
+    '/115/delete',
+    { fid: fileIds },
+  );
+  console.log(`删除接口响应: ${JSON.stringify(response)}`);
+  console.log(`已通过 API 提交删除 ${fileIds.length} 个不含番号的文件`);
 }
 
 /** 按 Markdown 数据重命名下载目录，并清理目录中的无关文件。 */
