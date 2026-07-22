@@ -1,4 +1,9 @@
 #!/bin/bash
+
+if [ "${PWD##*/}" = "115" ]; then
+  cd .. || exit 1
+fi
+
 # 用户输入的参数，支持多个番号
 codes=("$@")
 

@@ -2,17 +2,18 @@
  * 115 云下载自动化脚本
  *
  * 功能：
- * 1. 从 JSON 文件加载 115 Cookie，并使用本机 Chrome/Edge 打开 115 网盘。
+ * 1. 从本机 115 HTTP API 获取 Cookie，并使用本机 Chrome/Edge 打开 115 网盘。
  * 2. 检测登录状态，将 magnet 链接添加为云下载任务。
  * 3. 支持通过“番号”读取 ../jav/temp/<番号>.md 中的磁力链、磁力链目录名和标题。
  * 4. 下载任务创建后，将对应目录重命名为 Markdown 中的标题。
  * 5. 进入下载目录，删除文件名中不含完整番号或番号字母、数字部分的文件。
  *
  * 参数：
- *   node 115-cloud-load.js [Cookie文件] [--cloud-load <magnet链接>] [--番号 <番号>]
- * 未传参数时会使用交互式输入；默认 Cookie 文件为 cookies/cookies_115.json。
+ *   node 115-cloud-load.js [--cloud-load <magnet链接>] [--番号 <番号>]
+ * 未传参数时会使用交互式输入。
  */
 const fs = require('fs');
+const http = require('http');
 const path = require('path');
 const readline = require('readline');
 let chromium;
@@ -29,7 +30,7 @@ try {
 }
 
 const CLOUD_DOWNLOAD_CID = '739884770980370058';
-const DEFAULT_COOKIE_FILE = path.join(__dirname, 'cookies', 'cookies_115.json');
+const COOKIE_API_BASE_URL = 'http://127.0.0.1:1150';
 
 /** 等待指定的毫秒数后继续执行。 */
 function sleep(milliseconds) {
@@ -105,10 +106,9 @@ function createPrompt() {
   };
 }
 
-/** 解析 Cookie 文件、磁力链接和番号等命令行参数。 */
+/** 解析磁力链接和番号等命令行参数。 */
 function parseArguments(args = process.argv.slice(2)) {
   const parsed = {
-    cookieFile: null,
     cloudLoadUrl: null,
     bangou: null,
   };
@@ -128,10 +128,8 @@ function parseArguments(args = process.argv.slice(2)) {
       parsed.bangou = argument.slice('--番号='.length);
     } else if (argument.startsWith('-')) {
       throw new Error(`未知参数: ${argument}`);
-    } else if (!parsed.cookieFile) {
-      parsed.cookieFile = argument;
     } else {
-      throw new Error(`多余参数: ${argument}`);
+      throw new Error(`未知参数: ${argument}`);
     }
   }
 
@@ -229,21 +227,10 @@ async function readBangouRow(bangou, cloudLoadUrl, prompt) {
   };
 }
 
-/** 读取 Cookie JSON 文件并转换为 Playwright 可注入的 Cookie 格式。 */
-function loadCookiesFromFile(cookieFile) {
-  if (!fs.existsSync(cookieFile)) {
-    throw new Error(`找不到 Cookie 文件: ${cookieFile}`);
-  }
-
-  let cookiesList;
-  try {
-    cookiesList = JSON.parse(fs.readFileSync(cookieFile, 'utf8'));
-  } catch (error) {
-    throw new Error(`读取或解析 Cookie JSON 文件失败: ${error.message}`);
-  }
-
+/** 将 API 返回的 Cookie 数组转换为 Playwright 可注入的格式。 */
+function normalizeCookies(cookiesList) {
   if (!Array.isArray(cookiesList)) {
-    throw new Error('读取或解析 Cookie JSON 文件失败: 顶层数据必须是数组');
+    throw new Error('Cookies API 返回格式错误: 顶层数据必须是数组');
   }
 
   return cookiesList
@@ -277,8 +264,69 @@ function loadCookiesFromFile(cookieFile) {
     });
 }
 
-/** 将 Playwright Cookie 转回浏览器导出的 JSON Cookie 格式。 */
-function serializeCookiesForFile(cookies) {
+/** 请求本机 115 HTTP API 并解析 JSON 响应。 */
+function requestCookieApi(method, apiPath, body = null) {
+  const payload = body === null ? null : JSON.stringify(body);
+
+  return new Promise((resolve, reject) => {
+    const request = http.request(
+      new URL(apiPath, COOKIE_API_BASE_URL),
+      {
+        method,
+        headers: payload === null ? {} : {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(payload),
+        },
+      },
+      (response) => {
+        let responseBody = '';
+        response.setEncoding('utf8');
+        response.on('data', (chunk) => {
+          responseBody += chunk;
+        });
+        response.on('end', () => {
+          let data;
+          try {
+            data = responseBody ? JSON.parse(responseBody) : null;
+          } catch (error) {
+            reject(new Error(`Cookies API 返回的不是有效 JSON: ${error.message}`));
+            return;
+          }
+
+          if (response.statusCode < 200 || response.statusCode >= 300) {
+            reject(new Error(
+              data?.message || `Cookies API 请求失败: HTTP ${response.statusCode}`,
+            ));
+            return;
+          }
+
+          resolve(data);
+        });
+      },
+    );
+
+    request.setTimeout(10000, () => {
+      request.destroy(new Error('Cookies API 请求超时'));
+    });
+    request.on('error', (error) => {
+      reject(new Error(`无法访问 Cookies API: ${error.message}`));
+    });
+
+    if (payload !== null) {
+      request.write(payload);
+    }
+    request.end();
+  });
+}
+
+/** 从本机 API 获取 Cookie，并转换为 Playwright 格式。 */
+async function loadCookiesFromApi() {
+  const cookies = await requestCookieApi('GET', '/115/cookies/get');
+  return normalizeCookies(cookies);
+}
+
+/** 将 Playwright Cookie 转回 API 接受的 JSON Cookie 格式。 */
+function serializeCookiesForApi(cookies) {
   return cookies.map((cookie) => {
     const serialized = {
       domain: cookie.domain || '.115.com',
@@ -301,15 +349,15 @@ function serializeCookiesForFile(cookies) {
   });
 }
 
-/** 读取浏览器上下文中的最新 Cookies，并覆盖写回 JSON Cookie 文件。 */
-async function saveContextCookies(context, cookieFile) {
+/** 读取浏览器上下文中的最新 Cookies，并通过本机 API 更新缓存。 */
+async function saveContextCookies(context) {
   const cookies = await context.cookies();
-  fs.writeFileSync(
-    cookieFile,
-    `${JSON.stringify(serializeCookiesForFile(cookies))}\n`,
-    'utf8',
+  await requestCookieApi(
+    'POST',
+    '/115/cookies/update',
+    { cookies: serializeCookiesForApi(cookies) },
   );
-  console.log(`已更新 Cookies: ${cookieFile}`);
+  console.log(`已通过 ${COOKIE_API_BASE_URL}/115/cookies/update 更新 Cookies`);
 }
 
 /** 在页面及其所有 iframe 中查找符合条件的元素。 */
@@ -701,18 +749,19 @@ async function renameDirAndCleanup(page, rowData, bangou) {
 }
 
 /** 启动浏览器、注入 Cookie、添加云下载任务并执行目录整理。 */
-async function check115Login(cookieFile, cloudLoadUrl, bangou, rowData) {
+async function check115Login(cloudLoadUrl, bangou, rowData) {
   if (cloudLoadUrl) {
     cloudLoadUrl = decodeURIComponent(cloudLoadUrl);
   }
   console.log(
-    `check_115_login: cookie_file=${cookieFile}, cloud_load_url=${cloudLoadUrl}, `
+    `check_115_login: cloud_load_url=${cloudLoadUrl}, `
       + `番号=${bangou}, row_data=${JSON.stringify(rowData)}`,
   );
 
   let cookies;
   try {
-    cookies = loadCookiesFromFile(cookieFile);
+    cookies = await loadCookiesFromApi();
+    console.log(`已从 ${COOKIE_API_BASE_URL}/115/cookies/get 获取 ${cookies.length} 个 Cookies`);
   } catch (error) {
     console.error(`错误: ${error.message}`);
     return;
@@ -760,7 +809,7 @@ async function check115Login(cookieFile, cloudLoadUrl, bangou, rowData) {
   console.log('\n操作完毕。浏览器实例将在 3 秒后自动关闭。');
   await sleep(3000);
   try {
-    await saveContextCookies(context, cookieFile);
+    await saveContextCookies(context);
   } catch (error) {
     console.error(`更新 Cookies 失败: ${error.message}`);
   }
@@ -779,26 +828,17 @@ async function main() {
   }
 
   const prompt = createPrompt();
-  let cookieFile;
   let cloudLoadUrl;
   let bangou;
 
   try {
     if (process.argv.length === 2) {
       console.log('未提供任何参数，将逐个提示输入（可直接回车跳过）\n');
-      if (fs.existsSync(DEFAULT_COOKIE_FILE)) {
-        cookieFile = DEFAULT_COOKIE_FILE;
-      } else {
-        const cookieInput = await prompt.ask('Cookie 文件路径 [cookies_115.json 不存在]: ');
-        cookieFile = cookieInput || DEFAULT_COOKIE_FILE;
-      }
-
       const cloudLoadInput = await prompt.ask('离线下载链接 [默认: 不添加]: ');
       cloudLoadUrl = cloudLoadInput || null;
       const bangouInput = await prompt.ask('番号 [默认: 不添加]: ');
       bangou = bangouInput || null;
     } else {
-      cookieFile = args.cookieFile || DEFAULT_COOKIE_FILE;
       cloudLoadUrl = args.cloudLoadUrl;
       bangou = args.bangou;
     }
@@ -811,7 +851,6 @@ async function main() {
 
     const bangouResult = await readBangouRow(bangou, cloudLoadUrl, prompt);
     await check115Login(
-      cookieFile,
       bangouResult.cloudLoadUrl,
       bangouResult.bangou,
       bangouResult.rowData,
