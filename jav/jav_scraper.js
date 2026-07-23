@@ -363,7 +363,7 @@ async function fetchText(url) {
  */
 async function getJavInfo(code) {
   const url = `https://www.javbus.com/${code}`;
-  console.log(`访问 ${url} ...`);
+  console.error(`访问 ${url} ...`);
 
   try {
     const response = await fetchText(url);
@@ -400,7 +400,7 @@ async function getJavInfo(code) {
           magnet = getBestMagnet(ajaxResponse.text);
         }
       } catch (error) {
-        console.log(`获取磁力链接失败: ${error.message}`);
+        console.error(`获取磁力链接失败: ${error.message}`);
       }
     }
 

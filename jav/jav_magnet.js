@@ -73,7 +73,8 @@ function parseArgs(argv) {
 function ask(question) {
   const prompt = readline.createInterface({
     input: process.stdin,
-    output: process.stdout,
+    // 提示信息写入标准错误，保证标准输出始终是可解析的 JSON。
+    output: process.stderr,
   });
 
   return new Promise((resolve) => {
@@ -85,28 +86,18 @@ function ask(question) {
 }
 
 /**
- * 转义 Markdown 表格中的竖线并移除换行符。
- *
- * @param {unknown} value 单元格内容。
- * @returns {string} 可安全写入 Markdown 单元格的文本。
- */
-function escapeMarkdownCell(value) {
-  return String(value).replace(/\|/g, '\\|').replace(/\r?\n/g, ' ');
-}
-
-/**
  * jav_magnet.js 命令行入口。
  *
  * 从参数或交互输入取得番号，调用 jav_scraper.js 抓取数据，
- * 将 Markdown 表格输出到控制台并写入 jav/temp/{最后一个番号}.md。
+ * 将 JSON 数组输出到控制台并写入 jav/temp/{最后一个番号}.json。
  *
- * @returns {Promise<void>}
+ * @returns {Promise<object[]>} 抓取到的结构化结果。
  */
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.help) {
     printUsage();
-    return;
+    return [];
   }
 
   let codes;
@@ -120,47 +111,49 @@ async function main() {
   }
 
   if (codes.length === 0) {
-    console.log('错误：未提取到有效番号。');
-    return;
+    console.error('错误：未提取到有效番号。');
+    return [];
   }
 
-  const lines = [
-    '| 番号 | 标题 | 磁力链目录名 | 大小 | 日期 | 磁力链 |',
-    '| -- | -- | -- | -- | -- | -- |',
-  ];
+  const records = [];
 
-  // 按输入顺序逐个抓取，并把每个结果追加到同一张 Markdown 表格。
+  // 按输入顺序逐个抓取，并把每个结果追加到同一个 JSON 数组。
   for (const code of codes) {
     const result = await getJavInfo(code);
 
     if (result === null) {
-      console.log(`\n错误：获取 ${code} 信息失败，退出脚本。`);
+      console.error(`\n错误：获取 ${code} 信息失败，退出脚本。`);
       process.exitCode = 1;
-      return;
+      return records;
     }
 
-    const { title, magnet } = result;
-
-    if (magnet) {
-      lines.push(
-        `| ${code} | ${escapeMarkdownCell(title)} | ` +
-          `${magnet.name} | ${magnet.sizeStr} | ${magnet.date} | ${magnet.link} |`,
-      );
-    } else {
-      lines.push(
-        `| ${code} | ${escapeMarkdownCell(title)} | ` +
-          '未找到 | 未找到 | 未找到 | 未找到 |',
-      );
-    }
+    const { title, url, magnet } = result;
+    records.push({
+      code,
+      title,
+      url,
+      magnet: magnet
+        ? {
+            name: magnet.name,
+            size: magnet.sizeStr,
+            sizeBytes: magnet.sizeBytes,
+            date: magnet.date,
+            link: magnet.link,
+          }
+        : null,
+    });
   }
 
-  console.log(lines.join('\n'));
+  const output = JSON.stringify(records, null, 2);
+  console.log(output);
 
   // 保持原 Python 行为：多个番号时以最后一个番号作为输出文件名。
-  const outputPath = path.join(__dirname, 'temp', `${codes.at(-1)}.md`);
+  const outputPath = path.join(__dirname, 'temp', `${codes.at(-1)}.json`);
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-  fs.writeFileSync(outputPath, lines.join('\n'), 'utf8');
-  console.log(`\n已写入: ${outputPath}`);
+  fs.writeFileSync(outputPath, output, 'utf8');
+  console.error(`\n已写入: ${outputPath}`);
+
+  return records;
 }
 
 // 捕获未处理错误，输出简洁错误信息并设置非零退出码。
