@@ -4,12 +4,12 @@
  * 功能：
  * 1. 从本机 115 HTTP API 获取 Cookie，并使用本机 Chrome/Edge 打开 115 网盘。
  * 2. 检测登录状态，通过本机 115 HTTP API 将 magnet 链接添加为云下载任务。
- * 3. 支持通过“番号”读取 ../jav/temp/<番号>.md 中的磁力链和标题。
- * 4. 下载任务创建后，将对应目录重命名为 Markdown 中的标题。
+ * 3. 接收 jav_magnet.js 返回的 JSON，从中取得磁力链接和标题。
+ * 4. 下载任务创建后，将对应目录重命名为 JSON 中的标题。
  * 5. 通过本机 115 HTTP API 删除目录中不含完整番号或番号字母、数字部分的文件。
  *
  * 参数：
- *   node 115-cloud-load.js [--cloud-load <magnet链接>] [--番号 <番号>]
+ *   node 115-cloud-load.js [--cloud-load <magnet链接>] [--番号 <番号>] [--jav-json <JSON>]
  * 未传参数时会使用交互式输入。
  */
 const fs = require('fs');
@@ -156,6 +156,7 @@ function parseArguments(args = process.argv.slice(2)) {
   const parsed = {
     cloudLoadUrl: null,
     avCode: null,
+    javJson: null,
   };
 
   for (let index = 0; index < args.length; index += 1) {
@@ -171,6 +172,11 @@ function parseArguments(args = process.argv.slice(2)) {
       index += 1;
     } else if (argument.startsWith('--番号=')) {
       parsed.avCode = argument.slice('--番号='.length);
+    } else if (argument === '--jav-json') {
+      parsed.javJson = args[index + 1] ?? null;
+      index += 1;
+    } else if (argument.startsWith('--jav-json=')) {
+      parsed.javJson = argument.slice('--jav-json='.length);
     } else if (argument.startsWith('-')) {
       throw new Error(`未知参数: ${argument}`);
     } else {
@@ -182,104 +188,47 @@ function parseArguments(args = process.argv.slice(2)) {
   return parsed;
 }
 
-/** 按番号查找对应的 Markdown 文件，支持文件名大小写不一致。 */
-function findMarkdownPath(avCode) {
-  logStep('开始查找番号 Markdown 文件', avCode);
-  const markdownDir = path.join(__dirname, '..', 'jav', 'temp');
-  const exactPath = path.join(markdownDir, `${avCode}.md`);
-  if (fs.existsSync(exactPath)) {
-    logStep('找到完全匹配的 Markdown 文件', exactPath);
-    return exactPath;
+/** 解析 JSON 数组并返回指定番号对应的记录。 */
+function parseJsonRecord(javJson, avCode) {
+  logStep('开始解析 jav_magnet JSON 返回值', `字符数=${javJson.length}`);
+  const records = JSON.parse(javJson.replace(/^\uFEFF/, ''));
+
+  if (!Array.isArray(records)) {
+    throw new Error('JSON 顶层数据必须是数组');
   }
 
-  if (!fs.existsSync(markdownDir)) {
-    logStep('Markdown 目录不存在', markdownDir);
-    return exactPath;
-  }
-
-  const lowerAvCode = avCode.toLowerCase();
-  const matchedName = fs.readdirSync(markdownDir).find((name) => (
-    path.extname(name).toLowerCase() === '.md'
-      && path.basename(name, path.extname(name)).toLowerCase() === lowerAvCode
-  ));
-
-  const markdownPath = matchedName ? path.join(markdownDir, matchedName) : exactPath;
-  logStep(matchedName ? '找到忽略大小写匹配的 Markdown 文件' : '未找到番号 Markdown 文件', markdownPath);
-  return markdownPath;
+  const record = records.find((item) => (
+    item
+      && typeof item.code === 'string'
+      && (!avCode || item.code.toLowerCase() === avCode.toLowerCase())
+  )) ?? null;
+  logStep(
+    record ? '找到番号对应的 JSON 记录' : 'JSON 中未找到番号对应的记录',
+    record ?? avCode,
+  );
+  return record;
 }
 
-/** 解析 Markdown 表格并返回指定番号所在行的字段数据。 */
-function parseMarkdownRow(markdownPath, avCode) {
-  logStep('开始读取 Markdown 文件', markdownPath);
-  const content = fs.readFileSync(markdownPath, 'utf8');
-  logStep('Markdown 文件读取完成', `字符数=${content.length}`);
-  const lines = content
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line && !line.startsWith('| --'));
-
-  if (lines.length < 2) {
-    logStep('Markdown 中没有可解析的数据行');
-    return null;
-  }
-
-  const parseCells = (line) => line
-    .replace(/^\|/, '')
-    .replace(/\|$/, '')
-    .split('|')
-    .map((cell) => cell.trim());
-  const headers = parseCells(lines[0]);
-  logStep('Markdown 表头解析完成', headers);
-
-  for (const line of lines.slice(1)) {
-    const cells = parseCells(line);
-    if (cells[0] && cells[0].toLowerCase() === avCode.toLowerCase()) {
-      const row = Object.fromEntries(headers.map((header, index) => [header, cells[index] ?? '']));
-      logStep('找到番号对应的 Markdown 数据行', row);
-      return row;
-    }
-  }
-
-  logStep('Markdown 中未找到番号对应的数据行', avCode);
-  return null;
-}
-
-/** 读取番号数据，并在未显式提供时从 Markdown 中取得磁力链接。 */
-async function readAvCodeRow(avCode, cloudLoadUrl, prompt) {
-  logStep('开始读取番号关联数据', { avCode, hasCloudLoadUrl: Boolean(cloudLoadUrl) });
-  if (!avCode) {
-    logStep('未提供番号，跳过 Markdown 读取');
-    return {
-      rowData: null,
-      cloudLoadUrl,
-      avCode,
-    };
-  }
-
-  let markdownPath = findMarkdownPath(avCode);
-  if (!fs.existsSync(markdownPath)) {
-    console.error(
-      `错误: 找不到文件 ${markdownPath}，请先运行 node jav/jav_magnet.js --番号 ${avCode} 生成该文件`,
-    );
-    const input = await prompt.ask('请重新输入番号（直接回车跳过）: ');
-    logStep(input ? '已接收重新输入的番号' : '未重新输入番号', input || undefined);
-    if (input) {
-      avCode = input;
-      markdownPath = findMarkdownPath(avCode);
-    }
-  }
-
+/** 读取传入的番号数据，并在未显式提供时从 JSON 中取得磁力链接。 */
+function readAvCodeRow(avCode, javJson, cloudLoadUrl) {
+  logStep('开始解析番号关联数据', {
+    avCode,
+    hasJavJson: Boolean(javJson),
+    hasCloudLoadUrl: Boolean(cloudLoadUrl),
+  });
   let rowData = null;
-  if (fs.existsSync(markdownPath)) {
-    try {
-      rowData = parseMarkdownRow(markdownPath, avCode);
-      if (!cloudLoadUrl && rowData?.磁力链?.startsWith('magnet:?')) {
-        cloudLoadUrl = rowData.磁力链;
-        logStep('已从 Markdown 取得磁力链接');
-      }
-    } catch (error) {
-      console.error(`读取或解析 ${markdownPath} 失败: ${error.message}`);
+  if (javJson) {
+    rowData = parseJsonRecord(javJson, avCode);
+    if (!rowData) {
+      throw new Error(`JSON 中未找到番号 ${avCode || '(未指定)'}`);
     }
+    avCode = avCode || rowData.code;
+    if (!cloudLoadUrl && rowData.magnet?.link?.startsWith('magnet:?')) {
+      cloudLoadUrl = rowData.magnet.link;
+      logStep('已从 JSON 返回值取得磁力链接');
+    }
+  } else {
+    logStep('未传入 jav_magnet JSON，跳过番号数据解析');
   }
 
   const result = {
@@ -604,19 +553,19 @@ async function cleanupNonAvCodeFilesInDir(cateId, avCode) {
 }
 
 /**
- * 按 Markdown 数据重命名下载目录，并清理目录中的无关文件。
+ * 按 JSON 数据重命名下载目录，并清理目录中的无关文件。
  *
  * [cloudTaskJson] {"state":true,"errno":0,"errtype":"","errcode":0,"info_hash":"...","name":"SAVR-1029.8K","url":"magnet:?xt=urn:btih:..."}
  */
 async function renameDirAndCleanup(rowData, avCode, cloudTaskJson) {
-  // 步骤 1：校验 Markdown 数据和云下载任务名称。
+  // 步骤 1：校验 JSON 数据和云下载任务名称。
   logStep('开始执行下载目录重命名与文件清理', {
     avCode,
     hasRowData: Boolean(rowData),
     taskName: cloudTaskJson?.name || null,
   });
   if (!rowData || !cloudTaskJson?.name) {
-    logStep('缺少 Markdown 数据或云下载任务名称，跳过目录整理');
+    logStep('缺少 JSON 数据或云下载任务名称，跳过目录整理');
     return;
   }
 
@@ -626,9 +575,9 @@ async function renameDirAndCleanup(rowData, avCode, cloudTaskJson) {
   await sleep(3000);
 
   // 步骤 3：读取重命名所需的新标题。
-  const title = rowData['标题'];
+  const title = rowData.title;
   if (!title) {
-    logStep('Markdown 数据中没有标题，跳过目录整理');
+    logStep('JSON 数据中没有标题，跳过目录整理');
     return;
   }
 
@@ -853,8 +802,8 @@ async function main() {
     }
     logStep('离线下载链接格式校验通过');
 
-    // 步骤 4：按番号读取 Markdown，并补全磁力链接和标题数据。
-    const avCodeResult = await readAvCodeRow(avCode, cloudLoadUrl, prompt);
+    // 步骤 4：解析 jav_magnet JSON 返回值，并补全磁力链接和标题数据。
+    const avCodeResult = readAvCodeRow(avCode, args.javJson, cloudLoadUrl);
 
     // 步骤 5：执行登录、添加任务、重命名和清理流程。
     logStep('正在调用完整的 115 自动化流程');

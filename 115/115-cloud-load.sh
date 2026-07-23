@@ -24,6 +24,15 @@ for code in "${codes[@]}"; do
   [ -z "$code" ] && continue
 
   echo ">>> 处理番号: $code"
-  node jav/jav_magnet.js --番号 "$code"
-  node 115/115-cloud-load.js --番号 "$code"
+
+  if ! jav_json=$(node jav/jav_magnet.js --番号 "$code"); then
+    echo ">>> 获取番号数据失败，跳过: $code" >&2
+    continue
+  fi
+  if [ -z "$jav_json" ]; then
+    echo ">>> 番号数据为空，跳过: $code" >&2
+    continue
+  fi
+
+  node 115/115-cloud-load.js --番号 "$code" --jav-json "$jav_json"
 done
