@@ -9,7 +9,7 @@
  * 5. 通过本机 115 HTTP API 删除目录中不含完整番号或番号字母、数字部分的文件。
  *
  * 参数：
- *   node 115-cloud-load.js [--cloud-load <magnet链接>] [--番号 <番号>] [--jav-json <JSON>]
+ *   node 115-cloud-load.js [--cloud-load <magnet链接>] [--code <番号>] [--jav-json <JSON>]
  * 未传参数时会使用交互式输入。
  */
 const fs = require('fs');
@@ -167,11 +167,14 @@ function parseArguments(args = process.argv.slice(2)) {
       index += 1;
     } else if (argument.startsWith('--cloud-load=')) {
       parsed.cloudLoadUrl = argument.slice('--cloud-load='.length);
-    } else if (argument === '--番号') {
-      parsed.avCode = args[index + 1] ?? null;
-      index += 1;
-    } else if (argument.startsWith('--番号=')) {
-      parsed.avCode = argument.slice('--番号='.length);
+    } else if (argument === '--code') {
+      const nextArgument = args[index + 1];
+      if (nextArgument !== undefined && !nextArgument.startsWith('-')) {
+        parsed.avCode = nextArgument || null;
+        index += 1;
+      }
+    } else if (argument.startsWith('--code=')) {
+      parsed.avCode = argument.slice('--code='.length) || null;
     } else if (argument === '--jav-json') {
       parsed.javJson = args[index + 1] ?? null;
       index += 1;
@@ -188,25 +191,25 @@ function parseArguments(args = process.argv.slice(2)) {
   return parsed;
 }
 
-/** 解析 JSON 数组并返回指定番号对应的记录。 */
+/** 解析 JSON 对象，并校验其番号是否与指定番号一致。 */
 function parseJsonRecord(javJson, avCode) {
   logStep('开始解析 jav_magnet JSON 返回值', `字符数=${javJson.length}`);
-  const records = JSON.parse(javJson.replace(/^\uFEFF/, ''));
+  const record = JSON.parse(javJson.replace(/^\uFEFF/, ''));
 
-  if (!Array.isArray(records)) {
-    throw new Error('JSON 顶层数据必须是数组');
+  if (!record || typeof record !== 'object' || Array.isArray(record)) {
+    throw new Error('JSON 顶层数据必须是对象');
   }
 
-  const record = records.find((item) => (
-    item
-      && typeof item.code === 'string'
-      && (!avCode || item.code.toLowerCase() === avCode.toLowerCase())
-  )) ?? null;
+  if (typeof record.code !== 'string' || !record.code.trim()) {
+    throw new Error('JSON 对象必须包含非空字符串 code');
+  }
+
+  const isMatched = !avCode || record.code.toLowerCase() === avCode.toLowerCase();
   logStep(
-    record ? '找到番号对应的 JSON 记录' : 'JSON 中未找到番号对应的记录',
-    record ?? avCode,
+    isMatched ? 'JSON 对象的番号校验通过' : 'JSON 对象的番号与参数不匹配',
+    isMatched ? record : { jsonCode: record.code, avCode },
   );
-  return record;
+  return isMatched ? record : null;
 }
 
 /** 读取传入的番号数据，并在未显式提供时从 JSON 中取得磁力链接。 */
@@ -220,8 +223,9 @@ function readAvCodeRow(avCode, javJson, cloudLoadUrl) {
   if (javJson) {
     rowData = parseJsonRecord(javJson, avCode);
     if (!rowData) {
-      throw new Error(`JSON 中未找到番号 ${avCode || '(未指定)'}`);
+      throw new Error(`JSON 对象的 code 与参数 ${avCode || '(未指定)'} 不匹配`);
     }
+    // --code 为空时，使用 javJson 记录中的 code。
     avCode = avCode || rowData.code;
     if (!cloudLoadUrl && rowData.magnet?.link?.startsWith('magnet:?')) {
       cloudLoadUrl = rowData.magnet.link;
@@ -571,8 +575,8 @@ async function renameDirAndCleanup(rowData, avCode, cloudTaskJson) {
 
   // 步骤 2：等待 115 创建云下载目录。
   logStep('云下载任务数据', cloudTaskJson);
-  logStep('等待 3 秒，让云下载目录创建完成');
-  await sleep(3000);
+  logStep('等待 1 秒，让云下载目录创建完成');
+  await sleep(1000);
 
   // 步骤 3：读取重命名所需的新标题。
   const title = rowData.title;
@@ -715,7 +719,7 @@ async function check115Login(cloudLoadUrl, avCode, rowData) {
           console.error(`显示云下载错误提示失败: ${error.message}`);
         }
         logStep('等待 3 秒后关闭浏览器');
-        await sleep(3000);
+        // await sleep(3000);
         try {
           logStep('正在关闭浏览器');
           await browser.close();
@@ -749,7 +753,7 @@ async function check115Login(cloudLoadUrl, avCode, rowData) {
 
   // 阶段 8：保存最新 Cookie 并关闭浏览器。
   logStep('主要操作完毕，浏览器将在 3 秒后自动关闭');
-  await sleep(3000);
+  // await sleep(3000);
   try {
     await saveContextCookies(context);
   } catch (error) {
