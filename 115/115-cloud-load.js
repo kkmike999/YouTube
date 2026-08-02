@@ -356,7 +356,7 @@ function requestApi(method, apiPath, body = null) {
 /** 从本机 API 获取 Cookie，并转换为 Playwright 格式。 */
 async function loadCookiesFromApi() {
   logStep('开始从本机 API 加载 Cookies');
-  const cookies = await requestApi('GET', '/115/cookies/get');
+  const cookies = await requestApi('GET', '/cookies/get?host=115.com');
   const normalizedCookies = normalizeCookies(cookies);
   logStep('从本机 API 加载 Cookies 完成', `数量=${normalizedCookies.length}`);
   return normalizedCookies;
@@ -397,10 +397,13 @@ async function saveContextCookies(context) {
   logStep('开始将最新 Cookies 保存到本机 API');
   await requestApi(
     'POST',
-    '/115/cookies/update',
-    { cookies: serializeCookiesForApi(cookies) },
+    '/cookies/update',
+    {
+      host: '115.com',
+      cookies: serializeCookiesForApi(cookies),
+    },
   );
-  logStep(`已通过 ${COOKIE_API_BASE_URL}/115/cookies/update 更新 Cookies`);
+  logStep(`已通过 ${COOKIE_API_BASE_URL}/cookies/update 更新 Cookies`);
 }
 
 /** 预访问 115 域名并向浏览器上下文注入登录 Cookie。 */
