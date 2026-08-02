@@ -31,6 +31,8 @@ try {
 
 const CLOUD_DOWNLOAD_CID = '739884770980370058';
 const COOKIE_API_BASE_URL = 'http://127.0.0.1:1150';
+const DOWNLOAD_DIR_RETRY_COUNT = 5;
+const DOWNLOAD_DIR_RETRY_INTERVAL_MS = 1000;
 let logStepNumber = 0;
 
 /** 打印带递增序号的操作日志，便于定位执行进度。 */
@@ -578,8 +580,40 @@ async function renameDirAndCleanup(rowData, avCode, cloudTaskJson) {
 
   // 步骤 2：等待 115 创建云下载目录。
   logStep('云下载任务数据', cloudTaskJson);
-  logStep('等待 1 秒，让云下载目录创建完成');
-  await sleep(1000);
+  let fileJson;
+  for (let attempt = 1; attempt <= DOWNLOAD_DIR_RETRY_COUNT; attempt += 1) {
+    logStep(
+      `等待 ${DOWNLOAD_DIR_RETRY_INTERVAL_MS / 1000} 秒后检查云下载目录（${attempt}/${DOWNLOAD_DIR_RETRY_COUNT}）`,
+    );
+    await sleep(DOWNLOAD_DIR_RETRY_INTERVAL_MS);
+
+    logStep('正在读取[云下载]根目录文件列表');
+    const filesJson = await requestApi(
+      'GET',
+      `/115/files?cid=${encodeURIComponent(CLOUD_DOWNLOAD_CID)}`,
+    );
+
+    // {"data":[{"cid":"3383959617360493686","pid":"739884770980370058","n":"示例目录","fc":0,"name":"示例目录"},{"fid":"3479022661739218855","cid":"739884770980370058","n":"示例视频.mp4","s":763992447,"fc":1,"ico":"mp4","sha":"-","name":"示例视频.mp4"}],"count":2,"file_count":1,"folder_count":1,"page_size":200,"cid":"739884770980370058","path":[{"name":"根目录","cid":"0","pid":"0"},{"name":"云下载","cid":"739884770980370058","pid":"0"}],"offset":0,"limit":200,"state":true,"error":"","errNo":0}
+    logStep('文件列表接口响应', filesJson);
+    const files = Array.isArray(filesJson?.data)
+      ? filesJson.data
+      : [filesJson?.data].filter(Boolean);
+
+    fileJson = files.find((file) => file?.name === cloudTaskJson.name);
+    if (fileJson) {
+      break;
+    }
+
+    logStep('本次检查未找到云下载任务对应目录', {
+      attempt,
+      taskName: cloudTaskJson.name,
+    });
+  }
+
+  if (!fileJson) {
+    logStep('重试后仍未找到云下载任务对应目录', cloudTaskJson.name);
+    return;
+  }
 
   // 步骤 3：读取重命名所需的新标题。
   const title = rowData.title;
@@ -588,27 +622,7 @@ async function renameDirAndCleanup(rowData, avCode, cloudTaskJson) {
     return;
   }
 
-  // 步骤 4：通过 API 获取云下载根目录列表。
-  logStep('正在读取[云下载]根目录文件列表');
-  const filesJson = await requestApi(
-    'GET',
-    `/115/files?cid=${encodeURIComponent(CLOUD_DOWNLOAD_CID)}`,
-  );
-
-  // {"data":[{"cid":"3383959617360493686","pid":"739884770980370058","n":"示例目录","fc":0,"name":"示例目录"},{"fid":"3479022661739218855","cid":"739884770980370058","n":"示例视频.mp4","s":763992447,"fc":1,"ico":"mp4","sha":"-","name":"示例视频.mp4"}],"count":2,"file_count":1,"folder_count":1,"page_size":200,"cid":"739884770980370058","path":[{"name":"根目录","cid":"0","pid":"0"},{"name":"云下载","cid":"739884770980370058","pid":"0"}],"offset":0,"limit":200,"state":true,"error":"","errNo":0}
-  logStep('文件列表接口响应', filesJson);
-  const files = Array.isArray(filesJson?.data)
-    ? filesJson.data
-    : [filesJson?.data].filter(Boolean);
-
-  // 步骤 5：用云下载接口返回的原始任务名定位对应目录。
-  const fileJson = files.find((file) => file?.name === cloudTaskJson.name);
-  if (!fileJson) {
-    logStep('未找到云下载任务对应目录', cloudTaskJson.name);
-    return;
-  }
-
-  // 步骤 6：取得重命名使用的 ID，以及后续读取目录内容使用的 CID。
+  // 步骤 4：取得重命名使用的 ID，以及后续读取目录内容使用的 CID。
   const fid = fileJson['fid'] || fileJson['cid'];
   const cateId = String(fileJson['cid'] || '').trim();
   if (!fid) {
@@ -616,7 +630,7 @@ async function renameDirAndCleanup(rowData, avCode, cloudTaskJson) {
     return;
   }
 
-  // 步骤 7：通过 API 重命名目录。
+  // 步骤 5：通过 API 重命名目录。
   logStep('正在通过本机 API 重命名目录', { fid, oldName: fileJson.name, newName: title });
   const rspJson = await requestApi(
     'POST',
@@ -633,7 +647,7 @@ async function renameDirAndCleanup(rowData, avCode, cloudTaskJson) {
   }
   logStep('已通过 API 重命名目录', `${fileJson.name} -> ${title}`);
 
-  // 步骤 8：使用目录 CID 获取内容并删除不符合番号规则的文件。
+  // 步骤 6：使用目录 CID 获取内容并删除不符合番号规则的文件。
   await cleanupNonAvCodeFilesInDir(cateId, avCode);
   logStep('下载目录重命名与文件清理完成');
 }
