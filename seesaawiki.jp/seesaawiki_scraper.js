@@ -68,19 +68,30 @@ function cleanCellHtml(cellHtml) {
 }
 
 function findTitle(html) {
-  const divPattern = /<div\b([^>]*)>([\s\S]*?)<\/div>/gi;
+  const divPattern = /<div\b[^>]*>/gi;
   for (const match of html.matchAll(divPattern)) {
-    const openingTag = `<div${match[1]}>`;
-    const classNames = getAttribute(openingTag, "class").split(/\s+/);
-    if (!classNames.includes("title")) {
+    if (getAttribute(match[0], "id") !== "page-header-inner") {
       continue;
     }
 
-    const headingMatch = match[2].match(/<h2\b[^>]*>([\s\S]*?)<\/h2>/i);
+    const contentAfterHeader = html.slice(match.index + match[0].length);
+    const headingMatch = contentAfterHeader.match(
+      /<h2\b[^>]*>([\s\S]*?)<\/h2>/i,
+    );
     if (headingMatch) {
       return stripTags(headingMatch[1]);
     }
   }
+
+  const documentTitleMatch = html.match(
+    /<title\b[^>]*>([\s\S]*?)<\/title>/i,
+  );
+  if (documentTitleMatch) {
+    return stripTags(documentTitleMatch[1])
+      .replace(/\s+-\s+AV探そう\s*$/, "")
+      .trim();
+  }
+
   return "";
 }
 
@@ -195,7 +206,7 @@ async function main() {
       console.log("Could not find title node.");
     }
 
-    const normalizedTitle = pageTitle.replace(
+    const normalizedTitle = pageTitle.normalize("NFKC").replace(
       /^(\d{4})~~(\d{1,2})月$/,
       (_, year, month) => `${year}_${String(Number(month)).padStart(2, "0")}`,
     );
