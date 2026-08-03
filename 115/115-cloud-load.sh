@@ -25,9 +25,19 @@ for code in "${codes[@]}"; do
 
   echo ">>> 处理番号: $code"
 
-  if ! jav_json=$(node jav/jav_magnet.js --番号 "$code"); then
-    echo ">>> 获取番号数据失败，跳过: $code" >&2
-    continue
+  if [[ "$code" == [Ff][Cc]2* ]]; then
+    if ! jav_json=$(node heimacili/heimacili_search.js --keyword "$code"); then
+      echo ">>> 获取番号数据失败，跳过: $code" >&2
+      continue
+    fi
+  else
+    if ! jav_json=$(node jav/jav_magnet.js --番号 "$code"); then
+      echo ">>> jav_magnet 获取失败，改用 heimacili 搜索: $code" >&2
+      if ! jav_json=$(node heimacili/heimacili_search.js --keyword "$code"); then
+        echo ">>> 获取番号数据失败，跳过: $code" >&2
+        continue
+      fi
+    fi
   fi
   if [ -z "$jav_json" ]; then
     echo ">>> 番号数据为空，跳过: $code" >&2
