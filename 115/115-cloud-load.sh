@@ -70,5 +70,5 @@ for code in "${codes[@]}"; do
   #    }
   #  ]
 
-  node 115/115-cloud-load.js --番号 "$code" --jav-json "$jav_json"
+  node 115/115-cloud-load.js --code "$code" --jav-json "$jav_json"
 done

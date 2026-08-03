@@ -18,14 +18,78 @@ const path = require('path');
 const readline = require('readline');
 let chromium;
 
+const ERROR_CODES = Object.freeze({
+  PLAYWRIGHT_NOT_INSTALLED: 10,
+  BROWSER_NOT_FOUND: 11,
+  UNKNOWN_ARGUMENT: 12,
+  INVALID_MAGNET_URL: 13,
+  INVALID_JSON: 14,
+  INVALID_JSON_ROOT: 15,
+  MISSING_JSON_CODE: 16,
+  JSON_CODE_MISMATCH: 17,
+  INVALID_COOKIES_RESPONSE: 20,
+  API_INVALID_JSON: 21,
+  API_HTTP_ERROR: 22,
+  API_TIMEOUT: 23,
+  API_UNREACHABLE: 24,
+  LOAD_COOKIES_FAILED: 25,
+  BROWSER_LAUNCH_FAILED: 30,
+  BROWSER_CONTEXT_FAILED: 31,
+  BROWSER_PAGE_FAILED: 32,
+  COOKIE_INJECTION_FAILED: 33,
+  WANGPAN_NAVIGATION_FAILED: 34,
+  CLOUD_TASK_FAILED: 40,
+  TOAST_FAILED: 41,
+  FILE_LIST_INVALID: 50,
+  DELETE_FILES_FAILED: 51,
+  DOWNLOAD_DIR_NOT_FOUND: 52,
+  DOWNLOAD_DIR_ID_MISSING: 53,
+  RENAME_DIR_FAILED: 54,
+  DIRECTORY_CLEANUP_FAILED: 55,
+  SAVE_COOKIES_FAILED: 60,
+  BROWSER_CLOSE_FAILED: 61,
+  UNEXPECTED_ERROR: 99,
+});
+
+class FlowError extends Error {
+  constructor(code, message, cause) {
+    super(message, cause === undefined ? undefined : { cause });
+    this.name = 'FlowError';
+    this.code = code;
+  }
+}
+
+function createFlowError(code, message, cause) {
+  return new FlowError(code, message, cause);
+}
+
+function asFlowError(error, code, message) {
+  if (error instanceof FlowError) {
+    return error;
+  }
+  const detail = error?.message || String(error);
+  return createFlowError(code, `${message}: ${detail}`, error);
+}
+
+function formatError(error) {
+  const code = Number.isInteger(error?.code)
+    ? error.code
+    : ERROR_CODES.UNEXPECTED_ERROR;
+  return `[错误码 ${code}] ${error?.message || String(error)}`;
+}
+
 try {
   ({ chromium } = require('playwright-core'));
 } catch {
   try {
     ({ chromium } = require('playwright'));
   } catch {
-    console.error("错误: 未安装 playwright-core。请先在终端中运行 'npm install'");
-    process.exit(1);
+    const error = createFlowError(
+      ERROR_CODES.PLAYWRIGHT_NOT_INSTALLED,
+      "未安装 playwright-core。请先在终端中运行 'npm install'",
+    );
+    console.error(formatError(error));
+    process.exit(error.code);
   }
 }
 
@@ -116,7 +180,8 @@ function getLaunchOptions() {
   logStep('正在生成浏览器启动配置');
   const executablePath = getBrowserExecutablePath();
   if (!executablePath) {
-    throw new Error(
+    throw createFlowError(
+      ERROR_CODES.BROWSER_NOT_FOUND,
       '未找到 Chrome 或 Edge，请安装浏览器，或设置 CHROME_PATH / EDGE_PATH / BROWSER_PATH',
     );
   }
@@ -183,9 +248,9 @@ function parseArguments(args = process.argv.slice(2)) {
     } else if (argument.startsWith('--jav-json=')) {
       parsed.javJson = argument.slice('--jav-json='.length);
     } else if (argument.startsWith('-')) {
-      throw new Error(`未知参数: ${argument}`);
+      throw createFlowError(ERROR_CODES.UNKNOWN_ARGUMENT, `未知参数: ${argument}`);
     } else {
-      throw new Error(`未知参数: ${argument}`);
+      throw createFlowError(ERROR_CODES.UNKNOWN_ARGUMENT, `未知参数: ${argument}`);
     }
   }
 
@@ -196,14 +261,19 @@ function parseArguments(args = process.argv.slice(2)) {
 /** 解析 JSON 对象，并校验其番号是否与指定番号一致。 */
 function parseJsonRecord(javJson, avCode) {
   logStep('开始解析 jav_magnet JSON 返回值', `字符数=${javJson.length}`);
-  const record = JSON.parse(javJson.replace(/^\uFEFF/, ''));
+  let record;
+  try {
+    record = JSON.parse(javJson.replace(/^\uFEFF/, ''));
+  } catch (error) {
+    throw createFlowError(ERROR_CODES.INVALID_JSON, `jav_magnet JSON 解析失败: ${error.message}`, error);
+  }
 
   if (!record || typeof record !== 'object' || Array.isArray(record)) {
-    throw new Error('JSON 顶层数据必须是对象');
+    throw createFlowError(ERROR_CODES.INVALID_JSON_ROOT, 'JSON 顶层数据必须是对象');
   }
 
   if (typeof record.code !== 'string' || !record.code.trim()) {
-    throw new Error('JSON 对象必须包含非空字符串 code');
+    throw createFlowError(ERROR_CODES.MISSING_JSON_CODE, 'JSON 对象必须包含非空字符串 code');
   }
 
   const isMatched = !avCode || record.code.toLowerCase() === avCode.toLowerCase();
@@ -225,7 +295,10 @@ function readAvCodeRow(avCode, javJson, cloudLoadUrl) {
   if (javJson) {
     rowData = parseJsonRecord(javJson, avCode);
     if (!rowData) {
-      throw new Error(`JSON 对象的 code 与参数 ${avCode || '(未指定)'} 不匹配`);
+      throw createFlowError(
+        ERROR_CODES.JSON_CODE_MISMATCH,
+        `JSON 对象的 code 与参数 ${avCode || '(未指定)'} 不匹配`,
+      );
     }
     // --code 为空时，使用 javJson 记录中的 code。
     avCode = avCode || rowData.code;
@@ -254,7 +327,10 @@ function readAvCodeRow(avCode, javJson, cloudLoadUrl) {
 function normalizeCookies(cookiesList) {
   logStep('开始规范化 Cookies', `原始数量=${Array.isArray(cookiesList) ? cookiesList.length : '无效'}`);
   if (!Array.isArray(cookiesList)) {
-    throw new Error('Cookies API 返回格式错误: 顶层数据必须是数组');
+    throw createFlowError(
+      ERROR_CODES.INVALID_COOKIES_RESPONSE,
+      'Cookies API 返回格式错误: 顶层数据必须是数组',
+    );
   }
 
   const normalizedCookies = cookiesList
@@ -319,13 +395,18 @@ function requestApi(method, apiPath, body = null) {
             data = responseBody ? JSON.parse(responseBody) : null;
           } catch (error) {
             logStep('本机 115 API 响应 JSON 解析失败', `${method} ${apiPath}`);
-            reject(new Error(`115 API 返回的不是有效 JSON: ${error.message}`));
+            reject(createFlowError(
+              ERROR_CODES.API_INVALID_JSON,
+              `115 API 返回的不是有效 JSON: ${error.message}`,
+              error,
+            ));
             return;
           }
 
           if (response.statusCode < 200 || response.statusCode >= 300) {
             logStep('本机 115 API 返回失败状态', `${method} ${apiPath} HTTP ${response.statusCode}`);
-            reject(new Error(
+            reject(createFlowError(
+              ERROR_CODES.API_HTTP_ERROR,
               data?.message || `115 API 请求失败: HTTP ${response.statusCode}`,
             ));
             return;
@@ -339,11 +420,21 @@ function requestApi(method, apiPath, body = null) {
 
     request.setTimeout(10000, () => {
       logStep('本机 115 API 请求超时', `${method} ${apiPath}`);
-      request.destroy(new Error('115 API 请求超时'));
+      const error = createFlowError(ERROR_CODES.API_TIMEOUT, '115 API 请求超时');
+      reject(error);
+      request.destroy(error);
     });
     request.on('error', (error) => {
       logStep('本机 115 API 请求发生错误', `${method} ${apiPath}: ${error.message}`);
-      reject(new Error(`无法访问 115 API: ${error.message}`));
+      if (error instanceof FlowError) {
+        reject(error);
+        return;
+      }
+      reject(createFlowError(
+        ERROR_CODES.API_UNREACHABLE,
+        `无法访问 115 API: ${error.message}`,
+        error,
+      ));
     });
 
     if (payload !== null) {
@@ -474,9 +565,10 @@ async function addCloudTask(cloudLoadUrl) {
 async function collectNonAvCodeFileIds(filesJsonArray, avCode) {
   // 步骤 1：从文件列表响应中提取文件项。
   logStep('开始扫描目录文件并判断是否保留', avCode);
-  const files = Array.isArray(filesJsonArray?.data)
-    ? filesJsonArray.data
-    : [];
+  if (!Array.isArray(filesJsonArray?.data)) {
+    throw createFlowError(ERROR_CODES.FILE_LIST_INVALID, '文件列表接口返回格式错误: data 必须是数组');
+  }
+  const files = filesJsonArray.data;
   logStep('已取得当前目录文件项数量', files.length);
   const avCodeLower = avCode.toLowerCase();
   const parts = avCode.split('-');
@@ -556,7 +648,10 @@ async function cleanupNonAvCodeFilesInDir(cateId, avCode) {
   // 步骤 5：校验删除结果，避免把接口失败误记为成功。
   if (response?.state !== true || Number(response?.errno ?? response?.errcode ?? 0) !== 0) {
     logStep('删除接口返回失败，文件可能未被删除', response);
-    return;
+    throw createFlowError(
+      ERROR_CODES.DELETE_FILES_FAILED,
+      `删除文件失败: ${response?.error || response?.message || '接口返回失败状态'}`,
+    );
   }
   logStep(`已通过 API 提交删除 ${fileIds.length} 个不含番号的文件`);
 }
@@ -612,7 +707,10 @@ async function renameDirAndCleanup(rowData, avCode, cloudTaskJson) {
 
   if (!fileJson) {
     logStep('重试后仍未找到云下载任务对应目录', cloudTaskJson.name);
-    return;
+    throw createFlowError(
+      ERROR_CODES.DOWNLOAD_DIR_NOT_FOUND,
+      `未找到云下载任务对应目录: ${cloudTaskJson.name}`,
+    );
   }
 
   // 步骤 3：读取重命名所需的新标题。
@@ -626,8 +724,11 @@ async function renameDirAndCleanup(rowData, avCode, cloudTaskJson) {
   const fid = fileJson['fid'] || fileJson['cid'];
   const cateId = String(fileJson['cid'] || '').trim();
   if (!fid) {
-    logStep('目录数据缺少 fid 和 cid，跳过重命名', fileJson.name);
-    return;
+    logStep('目录数据缺少 fid 和 cid，无法重命名', fileJson.name);
+    throw createFlowError(
+      ERROR_CODES.DOWNLOAD_DIR_ID_MISSING,
+      `目录数据缺少 fid 和 cid: ${fileJson.name}`,
+    );
   }
 
   // 步骤 5：通过 API 重命名目录。
@@ -642,8 +743,11 @@ async function renameDirAndCleanup(rowData, avCode, cloudTaskJson) {
 
   // 重命名失败时停止，避免在目录状态不明确时继续删除文件。
   if (rspJson?.state !== true || Number(rspJson?.errno ?? rspJson?.errcode ?? 0) !== 0) {
-    logStep('重命名目录失败，跳过文件清理', rspJson);
-    return;
+    logStep('重命名目录失败，停止文件清理', rspJson);
+    throw createFlowError(
+      ERROR_CODES.RENAME_DIR_FAILED,
+      `重命名目录失败: ${rspJson?.error || rspJson?.message || '接口返回失败状态'}`,
+    );
   }
   logStep('已通过 API 重命名目录', `${fileJson.name} -> ${title}`);
 
@@ -658,7 +762,11 @@ async function check115Login(cloudLoadUrl, avCode, rowData) {
   logStep('开始执行 115 云下载自动化流程');
   if (cloudLoadUrl) {
     logStep('正在解码磁力链接参数');
-    cloudLoadUrl = decodeURIComponent(cloudLoadUrl);
+    try {
+      cloudLoadUrl = decodeURIComponent(cloudLoadUrl);
+    } catch (error) {
+      throw asFlowError(error, ERROR_CODES.INVALID_MAGNET_URL, '磁力链接参数解码失败');
+    }
     logStep('磁力链接参数解码完成');
   }
   logStep('自动化流程输入数据', {
@@ -667,59 +775,74 @@ async function check115Login(cloudLoadUrl, avCode, rowData) {
     rowData,
   });
 
-  // 阶段 2：从本机 API 获取登录 Cookie。
-  let cookies;
-  try {
-    logStep('正在获取登录 Cookies');
-    cookies = await loadCookiesFromApi();
-    logStep(`已从 ${COOKIE_API_BASE_URL}/115/cookies/get 获取 ${cookies.length} 个 Cookies`);
-  } catch (error) {
-    console.error(`错误: ${error.message}`);
-    logStep('获取登录 Cookies 失败，自动化流程结束');
-    return;
-  }
-
-  // 阶段 3：启动浏览器，供登录状态展示和 Cookie 同步使用。
-  logStep('正在启动 Chromium（请保持关注弹出的浏览器窗口）');
   let browser;
   try {
-    browser = await chromium.launch({
-      ...getLaunchOptions(),
-      timeout: 45000,
-    });
-    logStep('Chromium 启动成功');
-  } catch (error) {
-    console.error(`启动浏览器失败: ${error.message}`);
-    console.error(
-      '若仍失败：1) 关闭其它占用调试端口的 Chrome；'
-        + '2) 设置环境变量 CHROME_PATH 或 EDGE_PATH 为浏览器完整路径；'
-        + '3) 确认已安装 Chrome 或 Edge。',
-    );
-    logStep('Chromium 启动失败，自动化流程结束');
-    return;
-  }
+    // 阶段 2：从本机 API 获取登录 Cookie。
+    let cookies;
+    try {
+      logStep('正在获取登录 Cookies');
+      cookies = await loadCookiesFromApi();
+      logStep(`已从 ${COOKIE_API_BASE_URL}/cookies/get 获取 ${cookies.length} 个 Cookies`);
+    } catch (error) {
+      logStep('获取登录 Cookies 失败，自动化流程结束');
+      throw asFlowError(error, ERROR_CODES.LOAD_COOKIES_FAILED, '获取登录 Cookies 失败');
+    }
 
-  // 阶段 4：创建独立浏览器上下文和页面。
-  logStep('正在创建浏览器上下文');
-  const context = await browser.newContext();
-  logStep('浏览器上下文创建完成');
-  logStep('正在创建浏览器页面');
-  const page = await context.newPage();
-  logStep('浏览器页面创建完成');
-  let cloudTaskRsp = null;
+    // 阶段 3：启动浏览器，供登录状态展示和 Cookie 同步使用。
+    logStep('正在启动 Chromium（请保持关注弹出的浏览器窗口）');
+    try {
+      browser = await chromium.launch({
+        ...getLaunchOptions(),
+        timeout: 45000,
+      });
+      logStep('Chromium 启动成功');
+    } catch (error) {
+      logStep('Chromium 启动失败，自动化流程结束');
+      throw asFlowError(error, ERROR_CODES.BROWSER_LAUNCH_FAILED, '启动浏览器失败');
+    }
 
-  try {
+    // 阶段 4：创建独立浏览器上下文和页面。
+    logStep('正在创建浏览器上下文');
+    let context;
+    try {
+      context = await browser.newContext();
+    } catch (error) {
+      throw asFlowError(error, ERROR_CODES.BROWSER_CONTEXT_FAILED, '创建浏览器上下文失败');
+    }
+    logStep('浏览器上下文创建完成');
+    logStep('正在创建浏览器页面');
+    let page;
+    try {
+      page = await context.newPage();
+    } catch (error) {
+      throw asFlowError(error, ERROR_CODES.BROWSER_PAGE_FAILED, '创建浏览器页面失败');
+    }
+    logStep('浏览器页面创建完成');
+    let cloudTaskRsp = null;
+
     // 阶段 5：注入 Cookie、检查登录状态并打开云下载目录。
-    await injectCookies(page, context, cookies);
+    try {
+      await injectCookies(page, context, cookies);
+    } catch (error) {
+      throw asFlowError(error, ERROR_CODES.COOKIE_INJECTION_FAILED, '注入 Cookies 失败');
+    }
     const isLoggedIn = detectLoginStatus(cookies);
-    await gotoWangpan(page);
+    try {
+      await gotoWangpan(page);
+    } catch (error) {
+      throw asFlowError(error, ERROR_CODES.WANGPAN_NAVIGATION_FAILED, '打开云下载目录失败');
+    }
 
     // 阶段 6：登录有效且存在磁力链接时，通过 API 添加任务。
     if (isLoggedIn && cloudLoadUrl) {
       logStep('登录有效且存在磁力链接，开始创建云下载任务');
 
       // {"state":true,"errno":0,"errcode":0,"data":[{"state":true,"errno":0,"errtype":"","errcode":0,"info_hash":"...","name":"SAVR-1029.8K","url":"magnet:?xt=urn:btih:..."}]}
-      cloudTaskRsp = await addCloudTask(cloudLoadUrl);
+      try {
+        cloudTaskRsp = await addCloudTask(cloudLoadUrl);
+      } catch (error) {
+        throw asFlowError(error, ERROR_CODES.CLOUD_TASK_FAILED, '创建云下载任务请求失败');
+      }
       const cloudTaskJson = cloudTaskRsp?.data?.[0];
       const cloudTaskSucceeded = (
         cloudTaskRsp?.state === true
@@ -733,66 +856,57 @@ async function check115Login(cloudLoadUrl, avCode, rowData) {
           await toast(page, cloudTaskRsp?.error_msg);
           logStep('云下载错误提示显示完成');
         } catch (error) {
-          console.error(`显示云下载错误提示失败: ${error.message}`);
+          throw asFlowError(error, ERROR_CODES.TOAST_FAILED, '显示云下载错误提示失败');
         }
-        logStep('等待 3 秒后关闭浏览器');
-        // await sleep(3000);
-        try {
-          logStep('正在关闭浏览器');
-          await browser.close();
-          logStep('浏览器已关闭');
-        } catch (error) {
-          console.error(`关闭浏览器失败: ${error.message}`);
-        }
-        return;
+        throw createFlowError(
+          ERROR_CODES.CLOUD_TASK_FAILED,
+          `云下载任务创建失败: ${cloudTaskRsp?.error_msg || cloudTaskRsp?.message || '接口返回失败状态'}`,
+        );
       }
       logStep('云下载任务创建成功');
     } else {
       logStep('未满足创建云下载任务条件', { isLoggedIn, hasCloudLoadUrl: Boolean(cloudLoadUrl) });
     }
-  } catch (error) {
-    console.error(`【状态: 检查或操作过程出错】: ${error.message}`);
-  }
-
-  try {
     // 阶段 7：确认任务数据存在后，执行 API 重命名和文件清理。
     logStep('开始执行任务创建后的目录整理阶段');
     // {"state":true,"errno":0,"errtype":"","errcode":0,"info_hash":"...","name":"SAVR-1029.8K","url":"magnet:?xt=urn:btih:..."}
     const cloudTaskJson = cloudTaskRsp?.data?.[0];
     if (cloudTaskJson) {
-      await renameDirAndCleanup(rowData, avCode, cloudTaskJson);
+      try {
+        await renameDirAndCleanup(rowData, avCode, cloudTaskJson);
+      } catch (error) {
+        throw asFlowError(error, ERROR_CODES.DIRECTORY_CLEANUP_FAILED, '下载目录整理失败');
+      }
     } else {
       logStep('没有可整理的云下载任务数据，跳过目录重命名与清理');
     }
-  } catch (error) {
-    console.error(`重命名过程出错: ${error.message}`);
-  }
 
-  // 阶段 8：保存最新 Cookie 并关闭浏览器。
-  logStep('主要操作完毕，浏览器将在 3 秒后自动关闭');
-  // await sleep(3000);
-  try {
-    await saveContextCookies(context);
-  } catch (error) {
-    console.error(`更新 Cookies 失败: ${error.message}`);
+    // 阶段 8：保存最新 Cookie。
+    logStep('主要操作完毕，正在保存最新 Cookies');
+    try {
+      await saveContextCookies(context);
+    } catch (error) {
+      throw asFlowError(error, ERROR_CODES.SAVE_COOKIES_FAILED, '更新 Cookies 失败');
+    }
+  } finally {
+    if (browser) {
+      logStep('正在关闭浏览器');
+      try {
+        await browser.close();
+      } catch (error) {
+        throw asFlowError(error, ERROR_CODES.BROWSER_CLOSE_FAILED, '关闭浏览器失败');
+      }
+      logStep('浏览器已关闭');
+    }
   }
-  logStep('正在关闭浏览器');
-  await browser.close();
-  logStep('浏览器已关闭，115 云下载自动化流程结束');
+  logStep('115 云下载自动化流程结束');
 }
 
 /** 处理参数或交互输入，并组织执行完整的云下载自动化流程。 */
 async function main() {
   // 步骤 1：解析命令行参数。
   logStep('脚本启动');
-  let args;
-  try {
-    args = parseArguments();
-  } catch (error) {
-    console.error(`错误: ${error.message}`);
-    process.exitCode = 1;
-    return;
-  }
+  const args = parseArguments();
 
   const prompt = createPrompt();
   let cloudLoadUrl;
@@ -817,9 +931,10 @@ async function main() {
     // 步骤 3：校验磁力链接格式。
     logStep('正在校验离线下载链接格式');
     if (cloudLoadUrl && !cloudLoadUrl.trim().startsWith('magnet:?')) {
-      console.error("错误: 离线下载链接必须以 'magnet:?' 开头");
-      process.exitCode = 1;
-      return;
+      throw createFlowError(
+        ERROR_CODES.INVALID_MAGNET_URL,
+        "离线下载链接必须以 'magnet:?' 开头",
+      );
     }
     logStep('离线下载链接格式校验通过');
 
@@ -842,6 +957,9 @@ async function main() {
 
 logStep('正在进入 main 函数');
 main().catch((error) => {
-  console.error(`错误: ${error.message}`);
-  process.exitCode = 1;
+  const flowError = error instanceof FlowError
+    ? error
+    : asFlowError(error, ERROR_CODES.UNEXPECTED_ERROR, '未处理的流程异常');
+  console.error(formatError(flowError));
+  process.exitCode = flowError.code;
 });
