@@ -46,3 +46,9 @@ node seesaawiki_scraper.js
 
 - Node.js 18 或更高版本
 - 无第三方依赖
+
+## 启动http网页
+
+```shell
+pm2 start .\ecosystem.config.cjs
+```
