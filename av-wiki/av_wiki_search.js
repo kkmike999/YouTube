@@ -6,7 +6,7 @@ const readline = require("node:readline");
 
 const BROWSER_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
     + "AppleWebKit/537.36 (KHTML, like Gecko) "
-    + "Chrome/138.0.0.0 Safari/537.36";
+    + "Chrome/150.0.0.0 Safari/537.36";
 
 function getCodeArgument(args) {
     const inlineArgument = args.find((arg) => arg.startsWith("--code="));
@@ -218,12 +218,11 @@ async function fetchSearchResults(url) {
     const response = await fetch(url, {
         headers: {
             accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-            "accept-language": "ja-JP,ja;q=0.9,en-US;q=0.8,en;q=0.7",
-            "cache-control": "no-cache",
+            "accept-language": "ja-JP,ja;q=0.9,en-US;q=0.8,en;q=0.7,zh-CN;q=0.6,zh;q=0.5,zh-TW;q=0.4",
+            priority: "u=0, i",
             "upgrade-insecure-requests": "1",
             "user-agent": BROWSER_USER_AGENT,
         },
-        redirect: "follow",
     });
 
     if (response.ok) {
