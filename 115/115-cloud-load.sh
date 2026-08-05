@@ -25,7 +25,8 @@ for code in "${codes[@]}"; do
 
   echo ">>> 处理番号: $code"
 
-  if [[ "$code" == [Ff][Cc]2* ]]; then
+  # fc2、fc2-ppv，以及 MIUM 开头的番号
+  if [[ "$code" == [Ff][Cc]2* || "$code" == [Mm][Ii][Uu][Mm]* ]]; then
     if ! jav_json=$(node heimacili/heimacili_search.js --keyword "$code"); then
       echo ">>> 获取番号数据失败，跳过: $code" >&2
       continue
