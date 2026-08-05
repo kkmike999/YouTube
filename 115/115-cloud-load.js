@@ -6,7 +6,8 @@
  * 2. 检测登录状态，通过本机 115 HTTP API 将 magnet 链接添加为云下载任务。
  * 3. 接收 jav_magnet.js 返回的 JSON，从中取得磁力链接和标题。
  * 4. 下载任务创建后，将对应目录重命名为 JSON 中的标题。
- * 5. 通过本机 115 HTTP API 删除目录中不含完整番号或番号字母、数字部分的文件。
+ * 5. 重命名成功后，通过本机 115 HTTP API 清理已完成的云下载任务记录。
+ * 6. 通过本机 115 HTTP API 删除目录中不含完整番号或番号字母、数字部分的文件。
  *
  * 参数：
  *   node 115-cloud-load.js [--cloud-load <magnet链接>] [--code <番号>] [--jav-json <JSON>]
@@ -46,6 +47,7 @@ const ERROR_CODES = Object.freeze({
   DOWNLOAD_DIR_ID_MISSING: 53,
   RENAME_DIR_FAILED: 54,
   DIRECTORY_CLEANUP_FAILED: 55,
+  TASK_CLEAR_FAILED: 56,
   SAVE_COOKIES_FAILED: 60,
   BROWSER_CLOSE_FAILED: 61,
   UNEXPECTED_ERROR: 99,
@@ -560,6 +562,14 @@ async function addCloudTask(cloudLoadUrl) {
   return rspJson;
 }
 
+/** 通过本机 115 HTTP API 清理已完成的云下载任务记录。 */
+async function clearCompletedCloudTasks() {
+  logStep('正在通过本机 API 清理已完成的云下载任务');
+  const rspJson = await requestApi('POST', '/115/task_clear');
+  logStep('云下载任务清理接口响应', rspJson);
+  return rspJson;
+}
+
 /** 收集目录内文件名不包含完整番号或其字母、数字部分的文件 ID。 */
 /** [filesJsonArray] // {"data":[{"cid":"3383959617360493686","pid":"739884770980370058","n":"示例目录","fc":0,"name":"示例目录"},{"fid":"3479022661739218855","cid":"739884770980370058","n":"示例视频.mp4","s":763992447,"fc":1,"ico":"mp4","sha":"...","name":"示例视频.mp4"}]} */
 async function collectNonAvCodeFileIds(filesJsonArray, avCode) {
@@ -751,7 +761,14 @@ async function renameDirAndCleanup(rowData, avCode, cloudTaskJson) {
   }
   logStep('已通过 API 重命名目录', `${fileJson.name} -> ${title}`);
 
-  // 步骤 6：使用目录 CID 获取内容并删除不符合番号规则的文件。
+  // 步骤 6：重命名成功后，清理已完成的云下载任务记录。
+  try {
+    await clearCompletedCloudTasks();
+  } catch (error) {
+    throw asFlowError(error, ERROR_CODES.TASK_CLEAR_FAILED, '清理已完成的云下载任务失败');
+  }
+
+  // 步骤 7：使用目录 CID 获取内容并删除不符合番号规则的文件。
   await cleanupNonAvCodeFilesInDir(cateId, avCode);
   logStep('下载目录重命名与文件清理完成');
 }
