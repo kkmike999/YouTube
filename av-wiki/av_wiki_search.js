@@ -1,7 +1,5 @@
 "use strict";
 
-const fs = require("node:fs");
-const path = require("node:path");
 const readline = require("node:readline");
 
 const BROWSER_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -135,84 +133,6 @@ async function getFetch() {
     return nodeFetch;
 }
 
-function getBrowserExecutablePath() {
-    const configuredPaths = [
-        process.env.CHROME_PATH,
-        process.env.EDGE_PATH,
-        process.env.BROWSER_PATH,
-    ];
-    const installationRoots = [
-        process.env.PROGRAMFILES,
-        process.env["PROGRAMFILES(X86)"],
-        process.env.LOCALAPPDATA,
-    ].filter(Boolean);
-    const installedPaths = installationRoots.flatMap((root) => [
-        path.join(root, "Google", "Chrome", "Application", "chrome.exe"),
-        path.join(root, "Microsoft", "Edge", "Application", "msedge.exe"),
-    ]);
-
-    return [...configuredPaths, ...installedPaths]
-        .find((candidate) => candidate && fs.existsSync(candidate));
-}
-
-async function getSearchResultsWithBrowser(url) {
-    const {chromium} = require("playwright-core");
-    const executablePath = getBrowserExecutablePath();
-
-    if (!executablePath) {
-        throw new Error(
-            "响应中没有 article，且未找到 Chrome/Edge；"
-            + "请安装浏览器或设置 CHROME_PATH/EDGE_PATH/BROWSER_PATH",
-        );
-    }
-
-    const browser = await chromium.launch({
-        executablePath,
-        headless: true,
-    });
-
-    try {
-        const context = await browser.newContext({
-            locale: "ja-JP",
-            userAgent: BROWSER_USER_AGENT,
-        });
-        const page = await context.newPage();
-        await page.goto(url.toString(), {
-            waitUntil: "domcontentloaded",
-            timeout: 30000,
-        });
-        const articles = page.locator("article.archive-list");
-        await articles.first().waitFor({
-            state: "attached",
-            timeout: 30000,
-        });
-
-        return await articles.evaluateAll((articleNodes) => articleNodes.map((article, index) => {
-            const actressName = (article.querySelector("li.actress-name a")?.textContent || "")
-                .replace(/\s+/g, " ")
-                .trim();
-            const code = (Array.from(article.querySelectorAll("li"))
-                .find((item) => item.querySelector("i.fa-circle-o"))?.textContent || "")
-                .replace(/\s+/g, " ")
-                .trim();
-
-            if (!actressName) {
-                throw new Error(`第 ${index + 1} 个 article.archive-list 中的女优名为空`);
-            }
-            if (!code) {
-                throw new Error(`第 ${index + 1} 个 article.archive-list 中的番号为空`);
-            }
-
-            return {
-                code,
-                actress_name: actressName,
-            };
-        }));
-    } finally {
-        await browser.close();
-    }
-}
-
 async function fetchSearchResults(url) {
     const fetch = await getFetch();
     const response = await fetch(url, {
@@ -225,16 +145,12 @@ async function fetchSearchResults(url) {
         },
     });
 
-    if (response.ok) {
-        const html = await response.text();
-        try {
-            return getSearchResults(html);
-        } catch {
-            // 可能是 HTTP 200 的验证页，交给真实浏览器加载并解析 DOM。
-        }
+    if (!response.ok) {
+        throw new Error(`请求失败：HTTP ${response.status}`);
     }
 
-    return getSearchResultsWithBrowser(url);
+    const html = await response.text();
+    return getSearchResults(html);
 }
 
 async function main() {
