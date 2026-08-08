@@ -245,6 +245,10 @@ async function main() {
         throw new Error("番号不能为空");
     }
 
+    if (code.startsWith("fc2")) {
+        throw new Error("不支持 fc2 番号");
+    }
+
     const url = new URL("https://av-wiki.net/");
     url.searchParams.set("s", code);
 
