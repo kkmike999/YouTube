@@ -14,12 +14,26 @@
  * 未传参数时会使用交互式输入。
  */
 const fs = require('fs');
-const http = require('http');
 const path = require('path');
 const readline = require('readline');
+const {
+  API_BASE_URL,
+  CLOUD_DOWNLOAD_CID,
+  COMMON_ERROR_CODES,
+  FlowError,
+  asFlowError,
+  cleanupDirectory,
+  create115Client,
+  createCodeMatcher,
+  createFlowError,
+  createStepLogger,
+  formatError,
+  normalizeAvCode,
+} = require('./115-comm');
 let chromium;
 
 const ERROR_CODES = Object.freeze({
+  ...COMMON_ERROR_CODES,
   PLAYWRIGHT_NOT_INSTALLED: 10,
   BROWSER_NOT_FOUND: 11,
   UNKNOWN_ARGUMENT: 12,
@@ -29,10 +43,6 @@ const ERROR_CODES = Object.freeze({
   MISSING_JSON_CODE: 16,
   JSON_CODE_MISMATCH: 17,
   INVALID_COOKIES_RESPONSE: 20,
-  API_INVALID_JSON: 21,
-  API_HTTP_ERROR: 22,
-  API_TIMEOUT: 23,
-  API_UNREACHABLE: 24,
   LOAD_COOKIES_FAILED: 25,
   BROWSER_LAUNCH_FAILED: 30,
   BROWSER_CONTEXT_FAILED: 31,
@@ -41,44 +51,11 @@ const ERROR_CODES = Object.freeze({
   WANGPAN_NAVIGATION_FAILED: 34,
   CLOUD_TASK_FAILED: 40,
   TOAST_FAILED: 41,
-  FILE_LIST_INVALID: 50,
-  DELETE_FILES_FAILED: 51,
   DOWNLOAD_DIR_NOT_FOUND: 52,
-  DOWNLOAD_DIR_ID_MISSING: 53,
-  RENAME_DIR_FAILED: 54,
   DIRECTORY_CLEANUP_FAILED: 55,
-  TASK_CLEAR_FAILED: 56,
   SAVE_COOKIES_FAILED: 60,
   BROWSER_CLOSE_FAILED: 61,
-  UNEXPECTED_ERROR: 99,
 });
-
-class FlowError extends Error {
-  constructor(code, message, cause) {
-    super(message, cause === undefined ? undefined : { cause });
-    this.name = 'FlowError';
-    this.code = code;
-  }
-}
-
-function createFlowError(code, message, cause) {
-  return new FlowError(code, message, cause);
-}
-
-function asFlowError(error, code, message) {
-  if (error instanceof FlowError) {
-    return error;
-  }
-  const detail = error?.message || String(error);
-  return createFlowError(code, `${message}: ${detail}`, error);
-}
-
-function formatError(error) {
-  const code = Number.isInteger(error?.code)
-    ? error.code
-    : ERROR_CODES.UNEXPECTED_ERROR;
-  return `[错误码 ${code}] ${error?.message || String(error)}`;
-}
 
 try {
   ({ chromium } = require('playwright-core'));
@@ -95,20 +72,11 @@ try {
   }
 }
 
-const CLOUD_DOWNLOAD_CID = '739884770980370058';
-const COOKIE_API_BASE_URL = 'http://127.0.0.1:1150';
 const DOWNLOAD_DIR_RETRY_COUNT = 10;
 const DOWNLOAD_DIR_RETRY_INTERVAL_MS = 1000;
-let logStepNumber = 0;
-
-/** 打印带递增序号的操作日志，便于定位执行进度。 */
-function logStep(message, details) {
-  logStepNumber += 1;
-  const suffix = details === undefined
-    ? ''
-    : ` | ${typeof details === 'string' ? details : JSON.stringify(details)}`;
-  console.log(`[步骤 ${String(logStepNumber).padStart(3, '0')}] ${message}${suffix}`);
-}
+const logStep = createStepLogger();
+const client = create115Client({ logStep });
+const { requestApi } = client;
 
 /** 等待指定的毫秒数后继续执行。 */
 function sleep(milliseconds) {
@@ -368,86 +336,6 @@ function normalizeCookies(cookiesList) {
   return normalizedCookies;
 }
 
-/** 请求本机 115 HTTP API 并解析 JSON 响应。 */
-function requestApi(method, apiPath, body = null) {
-  const payload = body === null ? null : JSON.stringify(body);
-  logStep('准备请求本机 115 API', `${method} ${apiPath}`);
-
-  return new Promise((resolve, reject) => {
-    const request = http.request(
-      new URL(apiPath, COOKIE_API_BASE_URL),
-      {
-        method,
-        headers: payload === null ? {} : {
-          'Content-Type': 'application/json',
-          'Content-Length': Buffer.byteLength(payload),
-        },
-      },
-      (response) => {
-        logStep('已收到本机 115 API 响应头', `${method} ${apiPath} HTTP ${response.statusCode}`);
-        let responseBody = '';
-        response.setEncoding('utf8');
-        response.on('data', (chunk) => {
-          responseBody += chunk;
-        });
-        response.on('end', () => {
-          logStep('本机 115 API 响应接收完成', `${method} ${apiPath} 字符数=${responseBody.length}`);
-          let data;
-          try {
-            data = responseBody ? JSON.parse(responseBody) : null;
-          } catch (error) {
-            logStep('本机 115 API 响应 JSON 解析失败', `${method} ${apiPath}`);
-            reject(createFlowError(
-              ERROR_CODES.API_INVALID_JSON,
-              `115 API 返回的不是有效 JSON: ${error.message}`,
-              error,
-            ));
-            return;
-          }
-
-          if (response.statusCode < 200 || response.statusCode >= 300) {
-            logStep('本机 115 API 返回失败状态', `${method} ${apiPath} HTTP ${response.statusCode}`);
-            reject(createFlowError(
-              ERROR_CODES.API_HTTP_ERROR,
-              data?.message || `115 API 请求失败: HTTP ${response.statusCode}`,
-            ));
-            return;
-          }
-
-          resolve(data);
-          logStep('本机 115 API 请求成功', `${method} ${apiPath}`);
-        });
-      },
-    );
-
-    request.setTimeout(10000, () => {
-      logStep('本机 115 API 请求超时', `${method} ${apiPath}`);
-      const error = createFlowError(ERROR_CODES.API_TIMEOUT, '115 API 请求超时');
-      reject(error);
-      request.destroy(error);
-    });
-    request.on('error', (error) => {
-      logStep('本机 115 API 请求发生错误', `${method} ${apiPath}: ${error.message}`);
-      if (error instanceof FlowError) {
-        reject(error);
-        return;
-      }
-      reject(createFlowError(
-        ERROR_CODES.API_UNREACHABLE,
-        `无法访问 115 API: ${error.message}`,
-        error,
-      ));
-    });
-
-    if (payload !== null) {
-      logStep('正在写入本机 115 API 请求体', `${method} ${apiPath} 字节数=${Buffer.byteLength(payload)}`);
-      request.write(payload);
-    }
-    logStep('正在发送本机 115 API 请求', `${method} ${apiPath}`);
-    request.end();
-  });
-}
-
 /** 从本机 API 获取 Cookie，并转换为 Playwright 格式。 */
 async function loadCookiesFromApi() {
   logStep('开始从本机 API 加载 Cookies');
@@ -498,7 +386,7 @@ async function saveContextCookies(context) {
       cookies: serializeCookiesForApi(cookies),
     },
   );
-  logStep(`已通过 ${COOKIE_API_BASE_URL}/cookies/update 更新 Cookies`);
+  logStep(`已通过 ${API_BASE_URL}/cookies/update 更新 Cookies`);
 }
 
 /** 预访问 115 域名并向浏览器上下文注入登录 Cookie。 */
@@ -562,110 +450,6 @@ async function addCloudTask(cloudLoadUrl) {
   return rspJson;
 }
 
-/** 通过本机 115 HTTP API 清理已完成的云下载任务记录。 */
-async function clearCompletedCloudTasks() {
-  logStep('正在通过本机 API 清理已完成的云下载任务');
-  const rspJson = await requestApi('POST', '/115/task_clear');
-  logStep('云下载任务清理接口响应', rspJson);
-  return rspJson;
-}
-
-/** 收集目录内文件名不包含完整番号或其字母、数字部分的文件 ID。 */
-/** [filesJsonArray] // {"data":[{"cid":"3383959617360493686","pid":"739884770980370058","n":"示例目录","fc":0,"name":"示例目录"},{"fid":"3479022661739218855","cid":"739884770980370058","n":"示例视频.mp4","s":763992447,"fc":1,"ico":"mp4","sha":"...","name":"示例视频.mp4"}]} */
-async function collectNonAvCodeFileIds(filesJsonArray, avCode) {
-  // 步骤 1：从文件列表响应中提取文件项。
-  logStep('开始扫描目录文件并判断是否保留', avCode);
-  if (!Array.isArray(filesJsonArray?.data)) {
-    throw createFlowError(ERROR_CODES.FILE_LIST_INVALID, '文件列表接口返回格式错误: data 必须是数组');
-  }
-  const files = filesJsonArray.data;
-  logStep('已取得当前目录文件项数量', files.length);
-  const avCodeLower = avCode.toLowerCase();
-  const parts = avCode.split('-');
-  const fileIds = [];
-
-  // 步骤 2：逐个判断文件名是否符合保留规则。
-  for (const file of files) {
-    const name = String(file?.name || '');
-    const nameLower = name.toLowerCase();
-
-    // 保留规则一：文件名包含完整番号。
-    if (nameLower.includes(avCodeLower)) {
-      logStep('文件名包含完整番号，保留文件', name);
-      continue;
-    }
-
-    // 保留规则二：文件名同时包含番号的字母部分和数字部分。
-    if (
-      parts.length >= 2
-      && nameLower.includes(parts[0].toLowerCase())
-      && nameLower.includes(parts[1].toLowerCase())
-    ) {
-      logStep('文件名包含番号的字母和数字部分，保留文件', name);
-      continue;
-    }
-
-    // 只有真实文件的 fid 才能提交删除；目录等无 fid 项不处理。
-    const fileId = String(file?.fid || '').trim();
-    if (!fileId) {
-      logStep('文件缺少有效的 fid，跳过删除', name);
-      continue;
-    }
-
-    logStep('文件不符合番号规则，加入删除列表', { name, fileId });
-    fileIds.push(fileId);
-  }
-
-  logStep('目录文件扫描完成', `待删除数量=${fileIds.length}`);
-  return fileIds;
-}
-
-/** 在当前目录中查找并删除不符合番号规则的文件。 */
-async function cleanupNonAvCodeFilesInDir(cateId, avCode) {
-  // 步骤 1：校验清理目录和番号。
-  logStep('开始清理目录中不符合番号规则的文件', avCode);
-  if (!avCode || !cateId) {
-    logStep('缺少目录 ID 或番号，跳过文件清理', { cateId, avCode });
-    return;
-  }
-
-  // 步骤 2：通过 API 获取目标目录的文件列表。
-  logStep('请求已下载目录文件列表');
-  const filesJsonArray = await requestApi(
-    'GET',
-    `/115/files?cid=${encodeURIComponent(cateId)}`,
-  );
-
-  // {"data":[{"cid":"3383959617360493686","pid":"739884770980370058","n":"示例目录","fc":0,"name":"示例目录"},{"fid":"3479022661739218855","cid":"739884770980370058","n":"示例视频.mp4","s":763992447,"fc":1,"ico":"mp4","sha":"...","name":"示例视频.mp4"}]}
-  logStep('文件列表', filesJsonArray);
-
-  // 步骤 3：按照番号规则收集需要删除的文件 ID。
-  const fileIds = await collectNonAvCodeFileIds(filesJsonArray, avCode);
-  if (fileIds.length === 0) {
-    logStep('没有需要通过 API 删除的不含番号文件');
-    return;
-  }
-
-  // 步骤 4：一次性向删除接口提交所有待删除文件 ID。
-  logStep('正在通过本机 API 删除不符合番号规则的文件', fileIds);
-  const response = await requestApi(
-    'POST',
-    '/115/delete',
-    { fid: fileIds },
-  );
-  logStep('删除接口响应', response);
-
-  // 步骤 5：校验删除结果，避免把接口失败误记为成功。
-  if (response?.state !== true || Number(response?.errno ?? response?.errcode ?? 0) !== 0) {
-    logStep('删除接口返回失败，文件可能未被删除', response);
-    throw createFlowError(
-      ERROR_CODES.DELETE_FILES_FAILED,
-      `删除文件失败: ${response?.error || response?.message || '接口返回失败状态'}`,
-    );
-  }
-  logStep(`已通过 API 提交删除 ${fileIds.length} 个不含番号的文件`);
-}
-
 /**
  * 按 JSON 数据重命名下载目录，并清理目录中的无关文件。
  *
@@ -693,16 +477,8 @@ async function renameDirAndCleanup(rowData, avCode, cloudTaskJson) {
     await sleep(DOWNLOAD_DIR_RETRY_INTERVAL_MS);
 
     logStep('正在读取[云下载]根目录文件列表');
-    const filesJson = await requestApi(
-      'GET',
-      `/115/files?cid=${encodeURIComponent(CLOUD_DOWNLOAD_CID)}`,
-    );
-
-    // {"data":[{"cid":"3383959617360493686","pid":"739884770980370058","n":"示例目录","fc":0,"name":"示例目录"},{"fid":"3479022661739218855","cid":"739884770980370058","n":"示例视频.mp4","s":763992447,"fc":1,"ico":"mp4","sha":"-","name":"示例视频.mp4"}],"count":2,"file_count":1,"folder_count":1,"page_size":200,"cid":"739884770980370058","path":[{"name":"根目录","cid":"0","pid":"0"},{"name":"云下载","cid":"739884770980370058","pid":"0"}],"offset":0,"limit":200,"state":true,"error":"","errNo":0}
-    logStep('文件列表接口响应', filesJson);
-    const files = Array.isArray(filesJson?.data)
-      ? filesJson.data
-      : [filesJson?.data].filter(Boolean);
+    const files = await client.listAllFiles(CLOUD_DOWNLOAD_CID);
+    logStep('云下载根目录文件数量', files.length);
 
     fileJson = files.find((file) => file?.name === cloudTaskJson.name);
     if (fileJson) {
@@ -730,46 +506,29 @@ async function renameDirAndCleanup(rowData, avCode, cloudTaskJson) {
     return;
   }
 
-  // 步骤 4：取得重命名使用的 ID，以及后续读取目录内容使用的 CID。
-  const fid = fileJson['fid'] || fileJson['cid'];
+  // 步骤 4：取得后续读取目录内容使用的 CID。
   const cateId = String(fileJson['cid'] || '').trim();
-  if (!fid) {
-    logStep('目录数据缺少 fid 和 cid，无法重命名', fileJson.name);
+  if (!cateId) {
+    logStep('目录数据缺少 cid，无法整理', fileJson.name);
     throw createFlowError(
       ERROR_CODES.DOWNLOAD_DIR_ID_MISSING,
-      `目录数据缺少 fid 和 cid: ${fileJson.name}`,
+      `目录数据缺少 cid: ${fileJson.name}`,
     );
   }
 
   // 步骤 5：通过 API 重命名目录。
-  logStep('正在通过本机 API 重命名目录', { fid, oldName: fileJson.name, newName: title });
-  const rspJson = await requestApi(
-    'POST',
-    '/115/rename',
-    { fid, new_name: title },
-  );
-  //  {"state":true,"error":"","errno":0,"data":{"3479728362388194351":"SAVR-1029 【VR】あま姉..."}}
-  logStep('重命名接口响应', rspJson);
-
-  // 重命名失败时停止，避免在目录状态不明确时继续删除文件。
-  if (rspJson?.state !== true || Number(rspJson?.errno ?? rspJson?.errcode ?? 0) !== 0) {
-    logStep('重命名目录失败，停止文件清理', rspJson);
-    throw createFlowError(
-      ERROR_CODES.RENAME_DIR_FAILED,
-      `重命名目录失败: ${rspJson?.error || rspJson?.message || '接口返回失败状态'}`,
-    );
-  }
-  logStep('已通过 API 重命名目录', `${fileJson.name} -> ${title}`);
+  await client.renameDirectory(fileJson, title);
 
   // 步骤 6：重命名成功后，清理已完成的云下载任务记录。
   try {
-    await clearCompletedCloudTasks();
+    await client.clearCompletedCloudTasks();
   } catch (error) {
     throw asFlowError(error, ERROR_CODES.TASK_CLEAR_FAILED, '清理已完成的云下载任务失败');
   }
 
   // 步骤 7：使用目录 CID 获取内容并删除不符合番号规则的文件。
-  await cleanupNonAvCodeFilesInDir(cateId, avCode);
+  const { tokens } = normalizeAvCode(avCode);
+  await cleanupDirectory(client, cateId, createCodeMatcher(tokens), logStep);
   logStep('下载目录重命名与文件清理完成');
 }
 
@@ -799,7 +558,7 @@ async function check115Login(cloudLoadUrl, avCode, rowData) {
     try {
       logStep('正在获取登录 Cookies');
       cookies = await loadCookiesFromApi();
-      logStep(`已从 ${COOKIE_API_BASE_URL}/cookies/get 获取 ${cookies.length} 个 Cookies`);
+      logStep(`已从 ${API_BASE_URL}/cookies/get 获取 ${cookies.length} 个 Cookies`);
     } catch (error) {
       logStep('获取登录 Cookies 失败，自动化流程结束');
       throw asFlowError(error, ERROR_CODES.LOAD_COOKIES_FAILED, '获取登录 Cookies 失败');
@@ -869,7 +628,7 @@ async function check115Login(cloudLoadUrl, avCode, rowData) {
       if (!cloudTaskSucceeded) {
         logStep('云下载任务创建失败', cloudTaskRsp);
         try {
-          await clearCompletedCloudTasks();
+          await client.clearCompletedCloudTasks();
         } catch (error) {
           logStep('云下载任务创建失败后清理已完成任务失败', error?.message || String(error));
         }
