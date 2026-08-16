@@ -68,6 +68,20 @@ function logDebug(message, value) {
     process.stderr.write(`[debug] ${message}${suffix}\n`);
 }
 
+async function installSiteNoticeRemover(context) {
+    await context.addInitScript(() => {
+        const removeSiteNotice = () => {
+            document.querySelector("#K")?.remove();
+        };
+
+        removeSiteNotice();
+        new MutationObserver(removeSiteNotice).observe(document, {
+            childList: true,
+            subtree: true,
+        });
+    });
+}
+
 function parseArguments(argv) {
     let keyword = null;
 
@@ -598,7 +612,9 @@ async function main() {
     }
 
     try {
-        const page = await browser.newPage();
+        const context = await browser.newContext();
+        await installSiteNoticeRemover(context);
+        const page = await context.newPage();
         logDebug("搜索 keyword:", keyword);
         await performSearch(page, keyword);
 
@@ -651,6 +667,7 @@ if (require.main === module) {
 module.exports = {
     findBestSearchResult,
     ERROR_DEFINITIONS,
+    installSiteNoticeRemover,
     openSelectedDetailPage,
     parseArguments,
     parseFileSize,

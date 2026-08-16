@@ -6,7 +6,7 @@
  * 2. 检测登录状态，通过本机 115 HTTP API 将 magnet 链接添加为云下载任务。
  * 3. 接收 jav_magnet.js 返回的 JSON，从中取得磁力链接和标题。
  * 4. 下载任务创建后，将对应目录重命名为 JSON 中的标题。
- * 5. 重命名成功后，通过本机 115 HTTP API 清理已完成的云下载任务记录。
+ * 5. 任务创建失败或重命名成功后，通过本机 115 HTTP API 清理已完成的云下载任务记录。
  * 6. 通过本机 115 HTTP API 删除目录中不含完整番号或番号字母、数字部分的文件。
  *
  * 参数：
@@ -868,6 +868,11 @@ async function check115Login(cloudLoadUrl, avCode, rowData) {
       );
       if (!cloudTaskSucceeded) {
         logStep('云下载任务创建失败', cloudTaskRsp);
+        try {
+          await clearCompletedCloudTasks();
+        } catch (error) {
+          logStep('云下载任务创建失败后清理已完成任务失败', error?.message || String(error));
+        }
         try {
           logStep('正在页面中显示云下载错误提示');
           await toast(page, cloudTaskRsp?.error_msg);

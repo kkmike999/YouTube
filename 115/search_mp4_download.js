@@ -1,4 +1,5 @@
 const fs = require('fs');
+const http = require('http');
 const path = require('path');
 const readline = require('readline');
 let chromium;
@@ -13,6 +14,7 @@ const START_URL = 'https://115.com/?cid=3374099409331158534';
 const PASTE_TARGET_CID = '3445595181372409406';
 const PASTE_TARGET_URL = `https://115.com/?cid=${PASTE_TARGET_CID}&offset=0&tab=&mode=wangpan`;
 const COOKIE_FILE = path.join(__dirname, 'cookies', 'cookies_115.json');
+const COOKIE_API_BASE_URL = 'http://127.0.0.1:1150';
 const MAX_DEBUG_ITEMS = 80;
 
 function installClickListenerTracker(context) {
@@ -104,20 +106,9 @@ function getSearchKeyArgument(args = process.argv.slice(2)) {
   return argument === undefined ? undefined : argument.slice(prefix.length).trim();
 }
 
-function loadCookiesFromFile(cookieFile) {
-  if (!fs.existsSync(cookieFile)) {
-    throw new Error(`找不到 Cookie 文件: ${cookieFile}`);
-  }
-
-  let cookiesList;
-  try {
-    cookiesList = JSON.parse(fs.readFileSync(cookieFile, 'utf8'));
-  } catch (error) {
-    throw new Error(`读取或解析 Cookie JSON 文件失败: ${error.message}`);
-  }
-
+function normalizeCookies(cookiesList, sourceLabel) {
   if (!Array.isArray(cookiesList)) {
-    throw new Error('读取或解析 Cookie JSON 文件失败: 顶层数据必须是数组');
+    throw new Error(`${sourceLabel}: 顶层数据必须是数组`);
   }
 
   return cookiesList
@@ -149,6 +140,82 @@ function loadCookiesFromFile(cookieFile) {
 
       return playwrightCookie;
     });
+}
+
+function loadCookiesFromFile(cookieFile) {
+  let cookiesList;
+  try {
+    cookiesList = JSON.parse(fs.readFileSync(cookieFile, 'utf8'));
+  } catch (error) {
+    throw new Error(`读取或解析 Cookie JSON 文件失败: ${error.message}`);
+  }
+
+  return normalizeCookies(cookiesList, '读取或解析 Cookie JSON 文件失败');
+}
+
+function requestCookieApi(method, apiPath) {
+  return new Promise((resolve, reject) => {
+    const request = http.request(
+      new URL(apiPath, COOKIE_API_BASE_URL),
+      { method },
+      (response) => {
+        let responseBody = '';
+        response.setEncoding('utf8');
+        response.on('data', (chunk) => {
+          responseBody += chunk;
+        });
+        response.on('end', () => {
+          let data;
+          try {
+            data = responseBody ? JSON.parse(responseBody) : null;
+          } catch (error) {
+            reject(new Error(`Cookies API 返回的不是有效 JSON: ${error.message}`));
+            return;
+          }
+
+          if (response.statusCode < 200 || response.statusCode >= 300) {
+            reject(new Error(
+              data?.message || `Cookies API 请求失败: HTTP ${response.statusCode}`,
+            ));
+            return;
+          }
+
+          resolve(data);
+        });
+      },
+    );
+
+    request.setTimeout(10000, () => {
+      const error = new Error('Cookies API 请求超时');
+      reject(error);
+      request.destroy(error);
+    });
+    request.on('error', (error) => {
+      reject(new Error(`无法访问 Cookies API: ${error.message}`));
+    });
+    request.end();
+  });
+}
+
+async function loadCookiesFromApi() {
+  const cookiesList = await requestCookieApi('GET', '/cookies/get?host=115.com');
+  const cookies = normalizeCookies(cookiesList, 'Cookies API 返回格式错误');
+  if (cookies.length === 0) {
+    throw new Error('Cookies API 返回空数组，请先更新 115 cookies 缓存');
+  }
+  return cookies;
+}
+
+async function loadCookies() {
+  if (fs.existsSync(COOKIE_FILE)) {
+    console.log(`[debug] 从本地文件加载 Cookies: ${COOKIE_FILE}`);
+    return loadCookiesFromFile(COOKIE_FILE);
+  }
+
+  console.log(
+    `[debug] 未找到 Cookie 文件 ${COOKIE_FILE}，改为请求 ${COOKIE_API_BASE_URL}/cookies/get?host=115.com`,
+  );
+  return loadCookiesFromApi();
 }
 
 async function showToast(page, message) {
@@ -666,7 +733,7 @@ async function main() {
 
   let browser;
   try {
-    const cookies = loadCookiesFromFile(COOKIE_FILE);
+    const cookies = await loadCookies();
     browser = await chromium.launch(getLaunchOptions());
     const context = await browser.newContext();
     await installClickListenerTracker(context);

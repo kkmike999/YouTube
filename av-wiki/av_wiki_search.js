@@ -63,7 +63,7 @@ function getClassNames(openingTag) {
     return classAttribute ? classAttribute[2].split(/\s+/) : [];
 }
 
-function getArticleResult(article, index) {
+function getArticleResults(article, index) {
     const actressItems = article.match(/<li\b[^>]*>[\s\S]*?<\/li>/gi) || [];
     const actressItem = actressItems.find((item) => {
         const openingTag = item.match(/^<li\b[^>]*>/i)[0];
@@ -74,16 +74,20 @@ function getArticleResult(article, index) {
         throw new Error(`第 ${index + 1} 个 article.archive-list 中未找到 li.actress-name`);
     }
 
-    const linkMatch = actressItem.match(/<a\b[^>]*>([\s\S]*?)<\/a>/i);
-    if (!linkMatch) {
+    const linkMatches = [
+        ...actressItem.matchAll(/<a\b[^>]*>([\s\S]*?)<\/a>/gi),
+    ];
+    if (linkMatches.length === 0) {
         throw new Error("li.actress-name 中未找到 a 元素");
     }
 
-    const actressName = decodeHtmlEntities(linkMatch[1].replace(/<[^>]*>/g, ""))
-        .replace(/\s+/g, " ")
-        .trim();
+    const actressNames = linkMatches.map((linkMatch) => (
+        decodeHtmlEntities(linkMatch[1].replace(/<[^>]*>/g, ""))
+            .replace(/\s+/g, " ")
+            .trim()
+    ));
 
-    if (!actressName) {
+    if (actressNames.some((actressName) => !actressName)) {
         throw new Error("li.actress-name 中的 a 文本为空");
     }
 
@@ -104,24 +108,34 @@ function getArticleResult(article, index) {
         throw new Error(`第 ${index + 1} 个 article.archive-list 中的番号为空`);
     }
 
-    return {
+    return actressNames.map((actressName) => ({
         code,
         actress_name: actressName,
-    };
+    }));
 }
 
 function getSearchResults(html) {
-    const articles = (html.match(/<article\b[^>]*>[\s\S]*?<\/article>/gi) || [])
+    const getArchiveArticles = (articleMatches) => articleMatches
         .filter((article) => {
             const openingTag = article.match(/^<article\b[^>]*>/i)[0];
             return getClassNames(openingTag).includes("archive-list");
         });
 
+    let articles = getArchiveArticles(
+        html.match(/<article\b[^>]*>[\s\S]*?<\/article>/gi) || [],
+    );
+
+    if (articles.length === 0) {
+        articles = getArchiveArticles(
+            html.match(/<article\b[^>]*>[\s\S]*?<\/article\s*>/gi) || [],
+        );
+    }
+
     if (articles.length === 0) {
         throw new Error("页面中未找到 article.archive-list 元素");
     }
 
-    return articles.map(getArticleResult);
+    return articles.flatMap(getArticleResults);
 }
 
 async function getFetch() {
