@@ -247,7 +247,8 @@ function maxBySize(magnets) {
  *
  * 筛选顺序：
  * 1. 有 4K 条目时，选择其中体积最大的条目。
- * 2. 否则从后向前选择首个“名称全大写且带高清链接”的条目。
+ * 2. 否则从后向前选择首个“名称全大写且带高清链接”的条目，
+ *    并排除名称以 -AI、-U、-UC 结尾的条目。
  * 3. 仍未匹配时，选择所有条目中体积最大的条目。
  *
  * @param {string} html 包含 tr 表格行的 HTML 片段。
@@ -255,6 +256,7 @@ function maxBySize(magnets) {
  */
 function getBestMagnet(html) {
   const magnets = [];
+  const excludedUpperHdSuffixes = ['-AI', '-U', '-UC'];
 
   // 每行前三列依次为磁力名称、文件大小和分享日期。
   for (const row of extractElements(html, 'tr')) {
@@ -304,7 +306,16 @@ function getBestMagnet(html) {
   }
 
   for (let index = candidates.length - 1; index >= 0; index -= 1) {
-    if (candidates[index].nameIsUpper && candidates[index].hasHdLink) {
+    const upperName = candidates[index].name.toUpperCase();
+    const hasExcludedSuffix = excludedUpperHdSuffixes.some((suffix) =>
+      upperName.endsWith(suffix),
+    );
+
+    if (
+      candidates[index].nameIsUpper &&
+      candidates[index].hasHdLink &&
+      !hasExcludedSuffix
+    ) {
       return candidates[index];
     }
   }
