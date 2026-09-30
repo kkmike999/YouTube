@@ -6,7 +6,7 @@
  * 2. 检测登录状态，通过本机 115 HTTP API 将 magnet 链接添加为云下载任务。
  * 3. 接收 jav_magnet.js 返回的 JSON，从中取得磁力链接和标题。
  * 4. 下载任务创建后，将对应目录重命名为 JSON 中的标题。
- * 5. 任务创建失败或重命名成功后，通过本机 115 HTTP API 清理已完成的云下载任务记录。
+ * 5. 任务创建失败或重命名成功后，通过本机 115 HTTP API 只删除本次番号任务的云下载记录。
  * 6. 通过本机 115 HTTP API 删除目录中不含完整番号或番号字母、数字部分的文件。
  *
  * 参数：
@@ -425,6 +425,15 @@ async function gotoWangpan(page) {
   logStep('云下载目录页面加载完成');
 }
 
+/** 广播云下载事件。广播失败不掩盖调用方即将抛出的原错误。 */
+async function broadcastCloudDownload(type, result, message, data) {
+  try {
+    await client.notifyCloudDownload(type, result, message, data);
+  } catch (error) {
+    logStep('广播云下载事件失败', error?.message || String(error));
+  }
+}
+
 /**
  * 通过本机 115 HTTP API 提交磁力链接。
  * 返回值，JSON对象
@@ -491,13 +500,38 @@ async function renameDirAndCleanup(rowData, avCode, cloudTaskJson) {
     });
   }
 
+  const infoHash = typeof cloudTaskJson.info_hash === 'string' ? cloudTaskJson.info_hash : '';
   if (!fileJson) {
     logStep('重试后仍未找到云下载任务对应目录', cloudTaskJson.name);
-    throw createFlowError(
-      ERROR_CODES.DOWNLOAD_DIR_NOT_FOUND,
-      `未找到云下载任务对应目录: ${cloudTaskJson.name}`,
-    );
+    const message = `未找到云下载任务对应目录: ${cloudTaskJson.name}`;
+    await broadcastCloudDownload('cloud_download_found', ERROR_CODES.DOWNLOAD_DIR_NOT_FOUND, message, {
+      code: avCode || '',
+      name: cloudTaskJson.name,
+      cid: '',
+      info_hash: infoHash,
+    });
+    throw createFlowError(ERROR_CODES.DOWNLOAD_DIR_NOT_FOUND, message);
   }
+
+  const cateId = String(fileJson.cid || '').trim();
+  if (!cateId) {
+    logStep('目录数据缺少 cid，无法整理', fileJson.name);
+    const message = `目录数据缺少 cid: ${fileJson.name}`;
+    await broadcastCloudDownload('cloud_download_found', ERROR_CODES.DOWNLOAD_DIR_ID_MISSING, message, {
+      code: avCode || '',
+      name: fileJson.name,
+      cid: '',
+      info_hash: infoHash,
+    });
+    throw createFlowError(ERROR_CODES.DOWNLOAD_DIR_ID_MISSING, message);
+  }
+
+  await client.notifyCloudDownload('cloud_download_found', 0, '', {
+    code: avCode || '',
+    name: fileJson.name,
+    cid: cateId,
+    info_hash: infoHash,
+  });
 
   // 步骤 3：读取重命名所需的新标题。
   const title = rowData.title;
@@ -506,24 +540,40 @@ async function renameDirAndCleanup(rowData, avCode, cloudTaskJson) {
     return;
   }
 
-  // 步骤 4：取得后续读取目录内容使用的 CID。
-  const cateId = String(fileJson['cid'] || '').trim();
-  if (!cateId) {
-    logStep('目录数据缺少 cid，无法整理', fileJson.name);
-    throw createFlowError(
-      ERROR_CODES.DOWNLOAD_DIR_ID_MISSING,
-      `目录数据缺少 cid: ${fileJson.name}`,
+  // 步骤 4：通过 API 重命名目录。失败时 type 仍是 cloud_download_renamed，result 为错误码。
+  let renamed = false;
+  try {
+    renamed = await client.renameDirectory(fileJson, title);
+  } catch (error) {
+    await broadcastCloudDownload(
+      'cloud_download_renamed',
+      Number.isInteger(error?.code) ? error.code : ERROR_CODES.RENAME_DIR_FAILED,
+      error?.message || '重命名目录失败',
+      {
+        code: avCode || '',
+        from_name: fileJson.name,
+        name: title,
+        cid: cateId,
+        info_hash: infoHash,
+      },
     );
+    throw error;
+  }
+  if (renamed) {
+    await client.notifyCloudDownload('cloud_download_renamed', 0, '', {
+      code: avCode || '',
+      from_name: fileJson.name,
+      name: title,
+      cid: cateId,
+      info_hash: infoHash,
+    });
   }
 
-  // 步骤 5：通过 API 重命名目录。
-  await client.renameDirectory(fileJson, title);
-
-  // 步骤 6：重命名成功后，清理已完成的云下载任务记录。
+  // 步骤 6：重命名成功后，只删除本次任务的云下载记录。
   try {
-    await client.clearCompletedCloudTasks();
+    await client.deleteCloudTask(cloudTaskJson?.info_hash);
   } catch (error) {
-    throw asFlowError(error, ERROR_CODES.TASK_CLEAR_FAILED, '清理已完成的云下载任务失败');
+    throw asFlowError(error, ERROR_CODES.TASK_CLEAR_FAILED, '删除云下载任务记录失败');
   }
 
   // 步骤 7：使用目录 CID 获取内容并删除不符合番号规则的文件。
@@ -617,6 +667,17 @@ async function check115Login(cloudLoadUrl, avCode, rowData) {
       try {
         cloudTaskRsp = await addCloudTask(cloudLoadUrl);
       } catch (error) {
+        await broadcastCloudDownload(
+          'cloud_download_found',
+          ERROR_CODES.CLOUD_TASK_FAILED,
+          error?.message || '创建云下载任务请求失败',
+          {
+            code: avCode || '',
+            name: '',
+            cid: '',
+            info_hash: '',
+          },
+        );
         throw asFlowError(error, ERROR_CODES.CLOUD_TASK_FAILED, '创建云下载任务请求失败');
       }
       const cloudTaskJson = cloudTaskRsp?.data?.[0];
@@ -627,10 +688,21 @@ async function check115Login(cloudLoadUrl, avCode, rowData) {
       );
       if (!cloudTaskSucceeded) {
         logStep('云下载任务创建失败', cloudTaskRsp);
+        await broadcastCloudDownload(
+          'cloud_download_found',
+          ERROR_CODES.CLOUD_TASK_FAILED,
+          cloudTaskRsp?.error_msg || cloudTaskJson?.error_msg || cloudTaskRsp?.message || '接口返回失败状态',
+          {
+            code: avCode || '',
+            name: typeof cloudTaskJson?.name === 'string' ? cloudTaskJson.name : '',
+            cid: '',
+            info_hash: typeof cloudTaskJson?.info_hash === 'string' ? cloudTaskJson.info_hash : '',
+          },
+        );
         try {
-          await client.clearCompletedCloudTasks();
+          await client.deleteCloudTask(cloudTaskJson?.info_hash);
         } catch (error) {
-          logStep('云下载任务创建失败后清理已完成任务失败', error?.message || String(error));
+          logStep('云下载任务创建失败后删除任务记录失败', error?.message || String(error));
         }
         try {
           logStep('正在页面中显示云下载错误提示');

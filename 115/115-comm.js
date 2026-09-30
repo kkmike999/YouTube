@@ -213,17 +213,48 @@ function create115Client(options = {}) {
     return response;
   }
 
-  async function clearCompletedCloudTasks() {
-    logStep('正在通过本机 API 清理已完成的云下载任务');
-    const response = await requestApi('POST', '/115/task_clear');
-    logStep('云下载任务清理接口响应', response);
+  async function deleteCloudTask(infoHash) {
+    const hash = typeof infoHash === 'string' ? infoHash.trim() : '';
+    if (!hash) {
+      logStep('缺少 info_hash，跳过删除云下载任务记录');
+      return null;
+    }
+
+    logStep('正在通过本机 API 删除云下载任务记录', hash);
+    const response = await requestApi('POST', '/115/task_del', { hash: [hash] });
+    if (!isSuccessfulApiResponse(response)) {
+      throw createFlowError(
+        COMMON_ERROR_CODES.TASK_CLEAR_FAILED,
+        `删除云下载任务记录失败: ${response?.error || response?.message || '接口返回失败状态'}`,
+      );
+    }
+    logStep('云下载任务记录删除完成', response);
+    return response;
+  }
+
+  async function notifyCloudDownload(type, result, message, data) {
+    logStep('正在广播云下载事件', type);
+    const response = await requestApi('POST', '/115/clouddownload/notify', {
+      type,
+      result,
+      message,
+      data,
+    });
+    if (response?.result !== 0) {
+      throw createFlowError(
+        COMMON_ERROR_CODES.UNEXPECTED_ERROR,
+        `广播云下载事件失败: ${response?.message || '接口返回失败状态'}`,
+      );
+    }
+    logStep('云下载事件已广播', type);
     return response;
   }
 
   return {
-    clearCompletedCloudTasks,
+    deleteCloudTask,
     deleteFiles,
     listAllFiles,
+    notifyCloudDownload,
     renameDirectory,
     requestApi,
   };
