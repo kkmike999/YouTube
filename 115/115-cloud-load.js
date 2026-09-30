@@ -2,8 +2,8 @@
  * 115 云下载自动化脚本
  *
  * 功能：
- * 1. 从本机 115 HTTP API 获取 Cookie，并使用本机 Chrome/Edge 打开 115 网盘。
- * 2. 检测登录状态，通过本机 115 HTTP API 将 magnet 链接添加为云下载任务。
+ * 1. 独立运行可选的 Playwright 浏览器与 Cookie 同步流程，失败不影响云下载。
+ * 2. 通过本机 115 HTTP API 将 magnet 链接添加为云下载任务，由 API 校验登录。
  * 3. 接收 jav_magnet.js 返回的 JSON，从中取得磁力链接和标题。
  * 4. 下载任务创建后，将对应目录重命名为 JSON 中的标题。
  * 5. 任务创建失败或重命名成功后，通过本机 115 HTTP API 只删除本次番号任务的云下载记录。
@@ -30,7 +30,6 @@ const {
   formatError,
   normalizeAvCode,
 } = require('./115-comm');
-let chromium;
 
 const ERROR_CODES = Object.freeze({
   ...COMMON_ERROR_CODES,
@@ -50,27 +49,11 @@ const ERROR_CODES = Object.freeze({
   COOKIE_INJECTION_FAILED: 33,
   WANGPAN_NAVIGATION_FAILED: 34,
   CLOUD_TASK_FAILED: 40,
-  TOAST_FAILED: 41,
   DOWNLOAD_DIR_NOT_FOUND: 52,
   DIRECTORY_CLEANUP_FAILED: 55,
   SAVE_COOKIES_FAILED: 60,
   BROWSER_CLOSE_FAILED: 61,
 });
-
-try {
-  ({ chromium } = require('playwright-core'));
-} catch {
-  try {
-    ({ chromium } = require('playwright'));
-  } catch {
-    const error = createFlowError(
-      ERROR_CODES.PLAYWRIGHT_NOT_INSTALLED,
-      "未安装 playwright-core。请先在终端中运行 'npm install'",
-    );
-    console.error(formatError(error));
-    process.exit(error.code);
-  }
-}
 
 const DOWNLOAD_DIR_RETRY_COUNT = 10;
 const DOWNLOAD_DIR_RETRY_INTERVAL_MS = 1000;
@@ -81,31 +64,6 @@ const { requestApi } = client;
 /** 等待指定的毫秒数后继续执行。 */
 function sleep(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
-}
-
-/** 在当前页面显示错误提示。 */
-async function toast(page, message) {
-  await page.evaluate((text) => {
-    if (typeof window.toast === 'function') {
-      window.toast(text);
-      return;
-    }
-
-    const element = document.createElement('div');
-    element.textContent = text;
-    Object.assign(element.style, {
-      position: 'fixed',
-      top: '24px',
-      left: '50%',
-      zIndex: '2147483647',
-      padding: '12px 20px',
-      color: '#fff',
-      background: 'rgba(0, 0, 0, 0.8)',
-      borderRadius: '6px',
-      transform: 'translateX(-50%)',
-    });
-    document.body.appendChild(element);
-  }, String(message || '添加云下载任务失败'));
 }
 
 /** 从候选路径中返回第一个真实存在的路径。 */
@@ -582,24 +540,19 @@ async function renameDirAndCleanup(rowData, avCode, cloudTaskJson) {
   logStep('下载目录重命名与文件清理完成');
 }
 
-/** 启动浏览器、注入 Cookie、添加云下载任务并执行目录整理。 */
-async function check115Login(cloudLoadUrl, avCode, rowData) {
-  // 阶段 1：整理并记录输入参数。
-  logStep('开始执行 115 云下载自动化流程');
-  if (cloudLoadUrl) {
-    logStep('正在解码磁力链接参数');
+/** 独立执行可选的浏览器和 Cookie 同步，不参与云下载主流程。 */
+async function syncBrowserCookies() {
+  let chromium;
+  try {
+    ({ chromium } = require('playwright-core'));
+  } catch {
     try {
-      cloudLoadUrl = decodeURIComponent(cloudLoadUrl);
-    } catch (error) {
-      throw asFlowError(error, ERROR_CODES.INVALID_MAGNET_URL, '磁力链接参数解码失败');
+      ({ chromium } = require('playwright'));
+    } catch {
+      logStep('Playwright 不可加载，跳过浏览器与 Cookie 同步');
+      return;
     }
-    logStep('磁力链接参数解码完成');
   }
-  logStep('自动化流程输入数据', {
-    cloudLoadUrl,
-    avCode,
-    rowData,
-  });
 
   let browser;
   try {
@@ -614,8 +567,8 @@ async function check115Login(cloudLoadUrl, avCode, rowData) {
       throw asFlowError(error, ERROR_CODES.LOAD_COOKIES_FAILED, '获取登录 Cookies 失败');
     }
 
-    // 阶段 3：启动浏览器，供登录状态展示和 Cookie 同步使用。
-    logStep('正在启动 Chromium（请保持关注弹出的浏览器窗口）');
+    // 启动浏览器，仅用于独立的 Cookie 同步。
+    logStep('正在启动无头 Chromium 以同步 Cookies');
     try {
       browser = await chromium.launch({
         ...getLaunchOptions(),
@@ -644,7 +597,6 @@ async function check115Login(cloudLoadUrl, avCode, rowData) {
       throw asFlowError(error, ERROR_CODES.BROWSER_PAGE_FAILED, '创建浏览器页面失败');
     }
     logStep('浏览器页面创建完成');
-    let cloudTaskRsp = null;
 
     // 阶段 5：注入 Cookie、检查登录状态并打开云下载目录。
     try {
@@ -652,90 +604,14 @@ async function check115Login(cloudLoadUrl, avCode, rowData) {
     } catch (error) {
       throw asFlowError(error, ERROR_CODES.COOKIE_INJECTION_FAILED, '注入 Cookies 失败');
     }
-    const isLoggedIn = detectLoginStatus(cookies);
+    detectLoginStatus(cookies);
     try {
       await gotoWangpan(page);
     } catch (error) {
       throw asFlowError(error, ERROR_CODES.WANGPAN_NAVIGATION_FAILED, '打开云下载目录失败');
     }
 
-    // 阶段 6：登录有效且存在磁力链接时，通过 API 添加任务。
-    if (isLoggedIn && cloudLoadUrl) {
-      logStep('登录有效且存在磁力链接，开始创建云下载任务');
-
-      // {"state":true,"errno":0,"errcode":0,"data":[{"state":true,"errno":0,"errtype":"","errcode":0,"info_hash":"...","name":"SAVR-1029.8K","url":"magnet:?xt=urn:btih:..."}]}
-      try {
-        cloudTaskRsp = await addCloudTask(cloudLoadUrl);
-      } catch (error) {
-        await broadcastCloudDownload(
-          'cloud_download_found',
-          ERROR_CODES.CLOUD_TASK_FAILED,
-          error?.message || '创建云下载任务请求失败',
-          {
-            code: avCode || '',
-            name: '',
-            cid: '',
-            info_hash: '',
-          },
-        );
-        throw asFlowError(error, ERROR_CODES.CLOUD_TASK_FAILED, '创建云下载任务请求失败');
-      }
-      const cloudTaskJson = cloudTaskRsp?.data?.[0];
-      const cloudTaskSucceeded = (
-        cloudTaskRsp?.state === true
-        && Number(cloudTaskRsp?.errcode ?? cloudTaskRsp?.errno ?? 0) === 0
-        && cloudTaskJson?.state === true
-      );
-      if (!cloudTaskSucceeded) {
-        logStep('云下载任务创建失败', cloudTaskRsp);
-        await broadcastCloudDownload(
-          'cloud_download_found',
-          ERROR_CODES.CLOUD_TASK_FAILED,
-          cloudTaskRsp?.error_msg || cloudTaskJson?.error_msg || cloudTaskRsp?.message || '接口返回失败状态',
-          {
-            code: avCode || '',
-            name: typeof cloudTaskJson?.name === 'string' ? cloudTaskJson.name : '',
-            cid: '',
-            info_hash: typeof cloudTaskJson?.info_hash === 'string' ? cloudTaskJson.info_hash : '',
-          },
-        );
-        try {
-          await client.deleteCloudTask(cloudTaskJson?.info_hash);
-        } catch (error) {
-          logStep('云下载任务创建失败后删除任务记录失败', error?.message || String(error));
-        }
-        try {
-          logStep('正在页面中显示云下载错误提示');
-          await toast(page, cloudTaskRsp?.error_msg);
-          logStep('云下载错误提示显示完成');
-        } catch (error) {
-          throw asFlowError(error, ERROR_CODES.TOAST_FAILED, '显示云下载错误提示失败');
-        }
-        throw createFlowError(
-          ERROR_CODES.CLOUD_TASK_FAILED,
-          `云下载任务创建失败: ${cloudTaskRsp?.error_msg || cloudTaskRsp?.message || '接口返回失败状态'}`,
-        );
-      }
-      logStep('云下载任务创建成功');
-    } else {
-      logStep('未满足创建云下载任务条件', { isLoggedIn, hasCloudLoadUrl: Boolean(cloudLoadUrl) });
-    }
-    // 阶段 7：确认任务数据存在后，执行 API 重命名和文件清理。
-    logStep('开始执行任务创建后的目录整理阶段');
-    // {"state":true,"errno":0,"errtype":"","errcode":0,"info_hash":"...","name":"SAVR-1029.8K","url":"magnet:?xt=urn:btih:..."}
-    const cloudTaskJson = cloudTaskRsp?.data?.[0];
-    if (cloudTaskJson) {
-      try {
-        await renameDirAndCleanup(rowData, avCode, cloudTaskJson);
-      } catch (error) {
-        throw asFlowError(error, ERROR_CODES.DIRECTORY_CLEANUP_FAILED, '下载目录整理失败');
-      }
-    } else {
-      logStep('没有可整理的云下载任务数据，跳过目录重命名与清理');
-    }
-
-    // 阶段 8：保存最新 Cookie。
-    logStep('主要操作完毕，正在保存最新 Cookies');
+    logStep('浏览器流程正在保存最新 Cookies');
     try {
       await saveContextCookies(context);
     } catch (error) {
@@ -752,7 +628,73 @@ async function check115Login(cloudLoadUrl, avCode, rowData) {
       logStep('浏览器已关闭');
     }
   }
-  logStep('115 云下载自动化流程结束');
+  logStep('独立浏览器与 Cookie 同步流程结束');
+}
+
+/** 仅通过本机 API 添加云下载任务并执行目录整理。 */
+async function runCloudDownload(cloudLoadUrl, avCode, rowData) {
+  logStep('开始执行 115 API 云下载流程');
+  if (!cloudLoadUrl) {
+    logStep('未提供磁力链接，跳过云下载流程');
+    return;
+  }
+  try {
+    cloudLoadUrl = decodeURIComponent(cloudLoadUrl);
+  } catch (error) {
+    throw asFlowError(error, ERROR_CODES.INVALID_MAGNET_URL, '磁力链接参数解码失败');
+  }
+  let cloudTaskRsp;
+  logStep('开始通过 API 创建云下载任务');
+
+  try {
+    cloudTaskRsp = await addCloudTask(cloudLoadUrl);
+  } catch (error) {
+    await broadcastCloudDownload(
+      'cloud_download_found',
+      ERROR_CODES.CLOUD_TASK_FAILED,
+      error?.message || '创建云下载任务请求失败',
+      { code: avCode || '', name: '', cid: '', info_hash: '' },
+    );
+    throw asFlowError(error, ERROR_CODES.CLOUD_TASK_FAILED, '创建云下载任务请求失败');
+  }
+  const cloudTaskJson = cloudTaskRsp?.data?.[0];
+  const cloudTaskSucceeded = (
+    cloudTaskRsp?.state === true
+    && Number(cloudTaskRsp?.errcode ?? cloudTaskRsp?.errno ?? 0) === 0
+    && cloudTaskJson?.state === true
+  );
+  if (!cloudTaskSucceeded) {
+    logStep('云下载任务创建失败', cloudTaskRsp);
+    await broadcastCloudDownload(
+      'cloud_download_found',
+      ERROR_CODES.CLOUD_TASK_FAILED,
+      cloudTaskRsp?.error_msg || cloudTaskJson?.error_msg || cloudTaskRsp?.message || '接口返回失败状态',
+      {
+        code: avCode || '',
+        name: typeof cloudTaskJson?.name === 'string' ? cloudTaskJson.name : '',
+        cid: '',
+        info_hash: typeof cloudTaskJson?.info_hash === 'string' ? cloudTaskJson.info_hash : '',
+      },
+    );
+    try {
+      await client.deleteCloudTask(cloudTaskJson?.info_hash);
+    } catch (error) {
+      logStep('云下载任务创建失败后删除任务记录失败', error?.message || String(error));
+    }
+    throw createFlowError(
+      ERROR_CODES.CLOUD_TASK_FAILED,
+      `云下载任务创建失败: ${cloudTaskRsp?.error_msg || cloudTaskRsp?.message || '接口返回失败状态'}`,
+    );
+  }
+  logStep('云下载任务创建成功');
+  logStep('开始执行任务创建后的目录整理阶段');
+  try {
+    await renameDirAndCleanup(rowData, avCode, cloudTaskJson);
+  } catch (error) {
+    throw asFlowError(error, ERROR_CODES.DIRECTORY_CLEANUP_FAILED, '下载目录整理失败');
+  }
+
+  logStep('115 API 云下载流程结束');
 }
 
 /** 处理参数或交互输入，并组织执行完整的云下载自动化流程。 */
@@ -794,9 +736,9 @@ async function main() {
     // 步骤 4：解析 jav_magnet JSON 返回值，并补全磁力链接和标题数据。
     const avCodeResult = readAvCodeRow(avCode, args.javJson, cloudLoadUrl);
 
-    // 步骤 5：执行登录、添加任务、重命名和清理流程。
+    // 步骤 5：通过 API 添加任务、重命名和清理，不依赖浏览器流程。
     logStep('正在调用完整的 115 自动化流程');
-    await check115Login(
+    await runCloudDownload(
       avCodeResult.cloudLoadUrl,
       avCodeResult.avCode,
       avCodeResult.rowData,
@@ -808,6 +750,10 @@ async function main() {
   }
 }
 
+// 两条流程独立启动；浏览器分支的失败仅记录，不设置主流程退出码。
+void syncBrowserCookies().catch((error) => {
+  logStep('独立浏览器与 Cookie 同步失败', formatError(error));
+});
 logStep('正在进入 main 函数');
 main().catch((error) => {
   const flowError = error instanceof FlowError
