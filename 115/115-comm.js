@@ -59,10 +59,14 @@ function createStepLogger() {
 }
 
 function validateFileList(response) {
-  if (!Array.isArray(response?.data)) {
+  if (
+    response?.state === false
+    || Number(response?.errNo ?? response?.errCode ?? response?.errcode ?? response?.errno ?? 0) !== 0
+    || !Array.isArray(response?.data)
+  ) {
     throw createFlowError(
       COMMON_ERROR_CODES.FILE_LIST_INVALID,
-      '文件列表接口返回格式错误: data 必须是数组',
+      '文件列表接口失败或返回格式错误: data 必须是数组',
     );
   }
   return response.data;
@@ -143,6 +147,34 @@ function create115Client(options = {}) {
       }
       request.end();
     });
+  }
+
+  /** 分页读取已完成任务；合法的 tasks=null 空列表视为空数组。 */
+  async function listCompletedCloudTasks() {
+    const tasks = [];
+    for (let page = 1; ; page += 1) {
+      const query = new URLSearchParams({ page: String(page), stat: '11' });
+      const response = await requestApi('GET', `/115/task_lists?${query.toString()}`);
+      const pageCount = Number(response?.page_count);
+      const emptyTasks = response?.tasks === null && Number(response?.count) === 0;
+      if (
+        !isSuccessfulApiResponse(response)
+        || !Number.isInteger(pageCount)
+        || pageCount < 0
+        || Number(response?.page) !== page
+        || (!Array.isArray(response?.tasks) && !emptyTasks)
+        || (pageCount === 0 && (Number(response?.count) !== 0 || response?.tasks?.length > 0))
+      ) {
+        throw createFlowError(
+          COMMON_ERROR_CODES.API_INVALID_JSON,
+          '已完成任务列表接口失败或分页、tasks 格式无效',
+        );
+      }
+      tasks.push(...(response.tasks || []));
+      if (page >= pageCount) {
+        return tasks;
+      }
+    }
   }
 
   async function listAllFiles(cateId) {
@@ -254,6 +286,7 @@ function create115Client(options = {}) {
     deleteCloudTask,
     deleteFiles,
     listAllFiles,
+    listCompletedCloudTasks,
     notifyCloudDownload,
     renameDirectory,
     requestApi,

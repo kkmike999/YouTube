@@ -418,11 +418,12 @@ async function addCloudTask(cloudLoadUrl) {
 }
 
 /**
- * 按 JSON 数据重命名下载目录，并清理目录中的无关文件。
+ * 按 JSON 数据重命名下载对象；仅文件夹会清理内部无关文件。
+ * 已传入 matchedFile 时直接整理，不再等待或按名称重新查找。
  *
  * [cloudTaskJson] {"state":true,"errno":0,"errtype":"","errcode":0,"info_hash":"...","name":"SAVR-1029.8K","url":"magnet:?xt=urn:btih:..."}
  */
-async function renameDirAndCleanup(rowData, avCode, cloudTaskJson) {
+async function renameDirAndCleanup(rowData, avCode, cloudTaskJson, matchedFile = null) {
   // 步骤 1：校验 JSON 数据和云下载任务名称。
   logStep('开始执行下载目录重命名与文件清理', {
     avCode,
@@ -436,8 +437,8 @@ async function renameDirAndCleanup(rowData, avCode, cloudTaskJson) {
 
   // 步骤 2：等待 115 创建云下载目录。
   logStep('云下载任务数据', cloudTaskJson);
-  let fileJson;
-  for (let attempt = 1; attempt <= DOWNLOAD_DIR_RETRY_COUNT; attempt += 1) {
+  let fileJson = matchedFile;
+  for (let attempt = 1; !fileJson && attempt <= DOWNLOAD_DIR_RETRY_COUNT; attempt += 1) {
     logStep(
       `等待 ${DOWNLOAD_DIR_RETRY_INTERVAL_MS / 1000} 秒后检查云下载目录（${attempt}/${DOWNLOAD_DIR_RETRY_COUNT}）`,
     );
@@ -447,7 +448,7 @@ async function renameDirAndCleanup(rowData, avCode, cloudTaskJson) {
     const files = await client.listAllFiles(CLOUD_DOWNLOAD_CID);
     logStep('云下载根目录文件数量', files.length);
 
-    fileJson = files.find((file) => file?.name === cloudTaskJson.name);
+    fileJson = files.find((file) => (file?.name || file?.n) === cloudTaskJson.name);
     if (fileJson) {
       break;
     }
@@ -471,13 +472,16 @@ async function renameDirAndCleanup(rowData, avCode, cloudTaskJson) {
     throw createFlowError(ERROR_CODES.DOWNLOAD_DIR_NOT_FOUND, message);
   }
 
+  const fileName = String(fileJson.name || fileJson.n || '');
+  const fileId = String(fileJson.fid || '').trim();
+  const isFile = Boolean(fileId);
   const cateId = String(fileJson.cid || '').trim();
-  if (!cateId) {
-    logStep('目录数据缺少 cid，无法整理', fileJson.name);
-    const message = `目录数据缺少 cid: ${fileJson.name}`;
+  if (!(isFile ? fileId : cateId)) {
+    logStep('下载对象缺少 ID，无法整理', fileName);
+    const message = `下载对象缺少 fid 或 cid: ${fileName}`;
     await broadcastCloudDownload('cloud_download_found', ERROR_CODES.DOWNLOAD_DIR_ID_MISSING, message, {
       code: avCode || '',
-      name: fileJson.name,
+      name: fileName,
       cid: '',
       info_hash: infoHash,
     });
@@ -486,7 +490,7 @@ async function renameDirAndCleanup(rowData, avCode, cloudTaskJson) {
 
   await client.notifyCloudDownload('cloud_download_found', 0, '', {
     code: avCode || '',
-    name: fileJson.name,
+    name: fileName,
     cid: cateId,
     info_hash: infoHash,
   });
@@ -509,7 +513,7 @@ async function renameDirAndCleanup(rowData, avCode, cloudTaskJson) {
       error?.message || '重命名目录失败',
       {
         code: avCode || '',
-        from_name: fileJson.name,
+        from_name: fileName,
         name: title,
         cid: cateId,
         info_hash: infoHash,
@@ -520,7 +524,7 @@ async function renameDirAndCleanup(rowData, avCode, cloudTaskJson) {
   if (renamed) {
     await client.notifyCloudDownload('cloud_download_renamed', 0, '', {
       code: avCode || '',
-      from_name: fileJson.name,
+      from_name: fileName,
       name: title,
       cid: cateId,
       info_hash: infoHash,
@@ -535,6 +539,10 @@ async function renameDirAndCleanup(rowData, avCode, cloudTaskJson) {
   }
 
   // 步骤 7：使用目录 CID 获取内容并删除不符合番号规则的文件。
+  if (isFile) {
+    logStep('匹配对象为普通文件，跳过目录清理', fileName);
+    return;
+  }
   const { tokens } = normalizeAvCode(avCode);
   await cleanupDirectory(client, cateId, createCodeMatcher(tokens), logStep);
   logStep('下载目录重命名与文件清理完成');
@@ -631,7 +639,36 @@ async function syncBrowserCookies() {
   logStep('独立浏览器与 Cookie 同步流程结束');
 }
 
-/** 仅通过本机 API 添加云下载任务并执行目录整理。 */
+/** 严格匹配已完成任务和云下载目录中的对象，返回首个满足条件的结果。 */
+async function findCompletedDownload(cloudLoadUrl, title) {
+  if (typeof title !== 'string' || !title.trim()) {
+    logStep('缺少标题，跳过已完成任务复用检查');
+    return null;
+  }
+  const tasks = await client.listCompletedCloudTasks();
+  const files = await client.listAllFiles(CLOUD_DOWNLOAD_CID);
+  for (const task of tasks) {
+    const taskFileId = String(task?.file_id ?? '');
+    if (task?.url !== cloudLoadUrl || Number(task?.status) !== 2 || !taskFileId) {
+      continue;
+    }
+    const file = files.find((entry) => (
+      entry && typeof entry.n === 'string'
+      && task.name === entry.n
+      && entry.n !== title
+      && (
+        taskFileId === String(entry.cid ?? '')
+        || taskFileId === String(entry.fid ?? '')
+      )
+    ));
+    if (file) {
+      return { task, file };
+    }
+  }
+  return null;
+}
+
+/** 仅通过本机 API 复用已完成下载或创建任务，并执行目录整理。 */
 async function runCloudDownload(cloudLoadUrl, avCode, rowData) {
   logStep('开始执行 115 API 云下载流程');
   if (!cloudLoadUrl) {
@@ -643,6 +680,26 @@ async function runCloudDownload(cloudLoadUrl, avCode, rowData) {
   } catch (error) {
     throw asFlowError(error, ERROR_CODES.INVALID_MAGNET_URL, '磁力链接参数解码失败');
   }
+  let completedDownload = null;
+  try {
+    completedDownload = await findCompletedDownload(cloudLoadUrl, rowData?.title);
+  } catch (error) {
+    logStep('已完成下载检查失败，回退创建任务', formatError(error));
+  }
+  if (completedDownload) {
+    logStep('命中已完成下载，跳过创建任务及目录等待', {
+      name: completedDownload.file.n,
+      fileId: completedDownload.task.file_id,
+    });
+    try {
+      await renameDirAndCleanup(rowData, avCode, completedDownload.task, completedDownload.file);
+    } catch (error) {
+      throw asFlowError(error, ERROR_CODES.DIRECTORY_CLEANUP_FAILED, '已完成下载整理失败');
+    }
+    logStep('115 API 云下载流程结束');
+    return;
+  }
+  logStep('未命中可复用的已完成下载，继续创建任务');
   let cloudTaskRsp;
   logStep('开始通过 API 创建云下载任务');
 
