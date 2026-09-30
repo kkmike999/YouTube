@@ -49,14 +49,16 @@ const ERROR_CODES = Object.freeze({
   COOKIE_INJECTION_FAILED: 33,
   WANGPAN_NAVIGATION_FAILED: 34,
   CLOUD_TASK_FAILED: 40,
+  CLOUD_TASK_CONFIRM_TIMEOUT: 41,
   DOWNLOAD_DIR_NOT_FOUND: 52,
   DIRECTORY_CLEANUP_FAILED: 55,
   SAVE_COOKIES_FAILED: 60,
   BROWSER_CLOSE_FAILED: 61,
 });
 
-const DOWNLOAD_DIR_RETRY_COUNT = 10;
-const DOWNLOAD_DIR_RETRY_INTERVAL_MS = 1000;
+const TASK_POLL_INTERVAL_MS = 2000;
+const TASK_REQUEST_TIMEOUT_MS = 15000;
+const TASK_CONFIRM_TIMEOUT_MS = 10 * 60 * 1000;
 const logStep = createStepLogger();
 const client = create115Client({ logStep });
 const { requestApi } = client;
@@ -419,7 +421,7 @@ async function addCloudTask(cloudLoadUrl) {
 
 /**
  * 按 JSON 数据重命名下载对象；仅文件夹会清理内部无关文件。
- * 已传入 matchedFile 时直接整理，不再等待或按名称重新查找。
+ * 使用任务完成确认阶段返回的目录，不再按名称扫描云下载根目录。
  *
  * [cloudTaskJson] {"state":true,"errno":0,"errtype":"","errcode":0,"info_hash":"...","name":"SAVR-1029.8K","url":"magnet:?xt=urn:btih:..."}
  */
@@ -435,33 +437,13 @@ async function renameDirAndCleanup(rowData, avCode, cloudTaskJson, matchedFile =
     return;
   }
 
-  // 步骤 2：等待 115 创建云下载目录。
+  // 步骤 2：使用已确认完成且内容非空的任务目录。
   logStep('云下载任务数据', cloudTaskJson);
-  let fileJson = matchedFile;
-  for (let attempt = 1; !fileJson && attempt <= DOWNLOAD_DIR_RETRY_COUNT; attempt += 1) {
-    logStep(
-      `等待 ${DOWNLOAD_DIR_RETRY_INTERVAL_MS / 1000} 秒后检查云下载目录（${attempt}/${DOWNLOAD_DIR_RETRY_COUNT}）`,
-    );
-    await sleep(DOWNLOAD_DIR_RETRY_INTERVAL_MS);
-
-    logStep('正在读取[云下载]根目录文件列表');
-    const files = await client.listAllFiles(CLOUD_DOWNLOAD_CID);
-    logStep('云下载根目录文件数量', files.length);
-
-    fileJson = files.find((file) => (file?.name || file?.n) === cloudTaskJson.name);
-    if (fileJson) {
-      break;
-    }
-
-    logStep('本次检查未找到云下载任务对应目录', {
-      attempt,
-      taskName: cloudTaskJson.name,
-    });
-  }
+  const fileJson = matchedFile;
 
   const infoHash = typeof cloudTaskJson.info_hash === 'string' ? cloudTaskJson.info_hash : '';
   if (!fileJson) {
-    logStep('重试后仍未找到云下载任务对应目录', cloudTaskJson.name);
+    logStep('缺少已确认完成的任务目录', cloudTaskJson.name);
     const message = `未找到云下载任务对应目录: ${cloudTaskJson.name}`;
     await broadcastCloudDownload('cloud_download_found', ERROR_CODES.DOWNLOAD_DIR_NOT_FOUND, message, {
       code: avCode || '',
@@ -639,36 +621,138 @@ async function syncBrowserCookies() {
   logStep('独立浏览器与 Cookie 同步流程结束');
 }
 
-/** 严格匹配已完成任务和云下载目录中的对象，返回首个满足条件的结果。 */
+/** 在整体截止时间内请求；请求超时包括连接及响应体读取。 */
+function requestConfirmation(apiPath, deadline) {
+  const remaining = deadline - Date.now();
+  if (remaining <= 0) {
+    throw createFlowError(ERROR_CODES.CLOUD_TASK_CONFIRM_TIMEOUT, '任务完成确认超时');
+  }
+  return requestApi('GET', apiPath, null, {
+    timeoutMs: Math.min(TASK_REQUEST_TIMEOUT_MS, remaining),
+  });
+}
+
+/** 通过本机 API 确认任务目录内容，不将子文件当作下载目录。 */
+async function confirmTaskDirectory(task, deadline) {
+  const fileId = String(task?.file_id ?? '');
+  if (!fileId.trim()) {
+    return null;
+  }
+  const response = await requestConfirmation(
+    `/115/files?cid=${encodeURIComponent(fileId)}`,
+    deadline,
+  );
+  if (response?.state === false
+    || Number(response?.errcode ?? response?.errno ?? 0) !== 0
+    || String(response?.cid ?? '') !== fileId
+    || !Array.isArray(response?.data) || response.data.length === 0
+    || Date.now() >= deadline) {
+    return null;
+  }
+  return { task, file: { cid: fileId, n: task.name || '' } };
+}
+
+/** 磁力链接的显示名称和参数编码可变，使用 BTIH 标识同一个任务。 */
+function getMagnetInfoHash(url) {
+  try {
+    const magnet = new URL(url);
+    if (magnet.protocol !== 'magnet:') {
+      return '';
+    }
+    const xt = magnet.searchParams.getAll('xt').find((value) => /^urn:btih:/i.test(value));
+    return xt ? xt.slice('urn:btih:'.length).trim().toLowerCase() : '';
+  } catch {
+    return '';
+  }
+}
+
+/** 任务列表的 status 为 2 时表示下载完成。 */
+function isCompletedTask(task) {
+  return task?.status === 2;
+}
+
+function matchesCloudTask(task, cloudLoadUrl, infoHash = '') {
+  const expectedHash = String(infoHash || getMagnetInfoHash(cloudLoadUrl)).trim().toLowerCase();
+  const taskHash = String(task?.info_hash || getMagnetInfoHash(task?.url)).trim().toLowerCase();
+  return expectedHash && taskHash
+    ? expectedHash === taskHash
+    : task?.url === cloudLoadUrl;
+}
+
+/** 每轮单次查询已完成任务；任务完成后只请求一次目录内容。 */
+async function waitForCompletedDownload(cloudLoadUrl, cloudTaskJson) {
+  const deadline = Date.now() + TASK_CONFIRM_TIMEOUT_MS;
+  let completedTask = null;
+  while (Date.now() < deadline) {
+    try {
+      if (!completedTask) {
+        const tasks = await client.listCompletedCloudTasks({
+          deadline,
+          timeoutMs: TASK_REQUEST_TIMEOUT_MS,
+        });
+        const task = tasks.find((entry) => (
+          matchesCloudTask(entry, cloudLoadUrl, cloudTaskJson?.info_hash) && isCompletedTask(entry)
+          && String(entry?.file_id ?? '').trim()
+        ));
+        if (task) {
+          completedTask = { ...cloudTaskJson, ...task, name: task.name || cloudTaskJson.name };
+          logStep('匹配磁力链的任务已完成，开始确认目录内容', completedTask.file_id);
+        } else {
+          logStep('尚未找到本次已完成任务，继续等待', {
+            info_hash: cloudTaskJson?.info_hash || getMagnetInfoHash(cloudLoadUrl),
+            completedTasks: tasks.length,
+            remainingSeconds: Math.max(0, Math.ceil((deadline - Date.now()) / 1000)),
+          });
+        }
+      }
+    } catch (error) {
+      logStep('任务完成确认暂未成功，继续轮询', formatError(error));
+    }
+    // 目录请求位于重试捕获之外，网络或校验失败直接结束，不再轮询目录。
+    if (completedTask) {
+      const completed = await confirmTaskDirectory(completedTask, deadline);
+      if (!completed) {
+        throw createFlowError(
+          ERROR_CODES.FILE_LIST_INVALID,
+          '已完成任务目录校验失败: cid 不匹配或 data 为空、格式无效',
+        );
+      }
+      logStep('任务完成且目录内容已确认', completed.file.cid);
+      return completed;
+    }
+    const remaining = deadline - Date.now();
+    if (remaining > 0) {
+      await sleep(Math.min(TASK_POLL_INTERVAL_MS, remaining));
+    }
+  }
+  throw createFlowError(ERROR_CODES.CLOUD_TASK_CONFIRM_TIMEOUT, '任务完成确认超时');
+}
+
+/** 按磁力哈希匹配已完成任务，并直接确认其目录内容后复用。 */
 async function findCompletedDownload(cloudLoadUrl, title) {
   if (typeof title !== 'string' || !title.trim()) {
     logStep('缺少标题，跳过已完成任务复用检查');
     return null;
   }
-  const tasks = await client.listCompletedCloudTasks();
-  const files = await client.listAllFiles(CLOUD_DOWNLOAD_CID);
+  const deadline = Date.now() + TASK_REQUEST_TIMEOUT_MS;
+  const tasks = await client.listCompletedCloudTasks({ deadline, timeoutMs: TASK_REQUEST_TIMEOUT_MS });
   for (const task of tasks) {
     const taskFileId = String(task?.file_id ?? '');
-    if (task?.url !== cloudLoadUrl || Number(task?.status) !== 2 || !taskFileId) {
+    if (!matchesCloudTask(task, cloudLoadUrl) || !isCompletedTask(task) || !taskFileId.trim()) {
       continue;
     }
-    const file = files.find((entry) => (
-      entry && typeof entry.n === 'string'
-      && task.name === entry.n
-      && entry.n !== title
-      && (
-        taskFileId === String(entry.cid ?? '')
-        || taskFileId === String(entry.fid ?? '')
-      )
-    ));
-    if (file) {
-      return { task, file };
+    if (task.name === title) {
+      continue;
+    }
+    const completed = await confirmTaskDirectory(task, deadline);
+    if (completed) {
+      return completed;
     }
   }
   return null;
 }
 
-/** 仅通过本机 API 复用已完成下载或创建任务，并执行目录整理。 */
+/** 通过本机 API 创建任务，直接确认 115 目录后执行整理。 */
 async function runCloudDownload(cloudLoadUrl, avCode, rowData) {
   logStep('开始执行 115 API 云下载流程');
   if (!cloudLoadUrl) {
@@ -676,7 +760,10 @@ async function runCloudDownload(cloudLoadUrl, avCode, rowData) {
     return;
   }
   try {
-    cloudLoadUrl = decodeURIComponent(cloudLoadUrl);
+    // 完整磁力链保留内部编码，只解码整体被编码的参数。
+    if (!cloudLoadUrl.startsWith('magnet:?')) {
+      cloudLoadUrl = decodeURIComponent(cloudLoadUrl);
+    }
   } catch (error) {
     throw asFlowError(error, ERROR_CODES.INVALID_MAGNET_URL, '磁力链接参数解码失败');
   }
@@ -744,9 +831,21 @@ async function runCloudDownload(cloudLoadUrl, avCode, rowData) {
     );
   }
   logStep('云下载任务创建成功');
+  let completed;
+  try {
+    completed = await waitForCompletedDownload(cloudLoadUrl, cloudTaskJson);
+  } catch (error) {
+    await broadcastCloudDownload('cloud_download_found', error.code, error.message, {
+      code: avCode || '',
+      name: cloudTaskJson.name || '',
+      cid: '',
+      info_hash: cloudTaskJson.info_hash || '',
+    });
+    throw error;
+  }
   logStep('开始执行任务创建后的目录整理阶段');
   try {
-    await renameDirAndCleanup(rowData, avCode, cloudTaskJson);
+    await renameDirAndCleanup(rowData, avCode, completed.task, completed.file);
   } catch (error) {
     throw asFlowError(error, ERROR_CODES.DIRECTORY_CLEANUP_FAILED, '下载目录整理失败');
   }

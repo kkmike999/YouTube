@@ -2,6 +2,7 @@
 
 /** 115 云下载脚本共用的 API、错误处理和目录整理基础能力。 */
 const http = require('node:http');
+const https = require('node:https');
 
 const CLOUD_DOWNLOAD_CID = '739884770980370058';
 const API_BASE_URL = 'http://127.0.0.1:1150';
@@ -81,21 +82,27 @@ function create115Client(options = {}) {
   const baseUrl = options.baseUrl || API_BASE_URL;
   const logStep = options.logStep || (() => {});
 
-  function requestApi(method, apiPath, body = null) {
+  function requestApi(method, apiPath, body = null, requestOptions = {}) {
     const payload = body === null ? null : JSON.stringify(body);
-    logStep('准备请求本机 115 API', `${method} ${apiPath}`);
+    const url = new URL(apiPath, baseUrl);
+    const transport = url.protocol === 'https:' ? https : http;
+    logStep('准备请求 115 API', `${method} ${apiPath}`);
 
     return new Promise((resolve, reject) => {
-      const request = http.request(
-        new URL(apiPath, baseUrl),
+      const request = transport.request(
+        url,
         {
           method,
-          headers: payload === null ? {} : {
-            'Content-Type': 'application/json',
-            'Content-Length': Buffer.byteLength(payload),
+          headers: {
+            ...requestOptions.headers,
+            ...(payload === null ? {} : {
+              'Content-Type': 'application/json',
+              'Content-Length': Buffer.byteLength(payload),
+            }),
           },
         },
         (response) => {
+          response.on('error', reject);
           let responseBody = '';
           response.setEncoding('utf8');
           response.on('data', (chunk) => {
@@ -122,16 +129,19 @@ function create115Client(options = {}) {
               return;
             }
 
-            logStep('本机 115 API 请求成功', `${method} ${apiPath}`);
+            logStep('115 API 请求成功', `${method} ${apiPath}`);
             resolve(data);
           });
         },
       );
 
-      request.setTimeout(10000, () => {
+      const timeoutMs = requestOptions.timeoutMs ?? 10000;
+      const timeout = setTimeout(() => {
         const error = createFlowError(COMMON_ERROR_CODES.API_TIMEOUT, '115 API 请求超时');
         request.destroy(error);
-      });
+        reject(error);
+      }, timeoutMs);
+      request.on('close', () => clearTimeout(timeout));
       request.on('error', (error) => {
         reject(error instanceof FlowError
           ? error
@@ -149,32 +159,26 @@ function create115Client(options = {}) {
     });
   }
 
-  /** 分页读取已完成任务；合法的 tasks=null 空列表视为空数组。 */
-  async function listCompletedCloudTasks() {
-    const tasks = [];
-    for (let page = 1; ; page += 1) {
-      const query = new URLSearchParams({ page: String(page), stat: '11' });
-      const response = await requestApi('GET', `/115/task_lists?${query.toString()}`);
-      const pageCount = Number(response?.page_count);
-      const emptyTasks = response?.tasks === null && Number(response?.count) === 0;
-      if (
-        !isSuccessfulApiResponse(response)
-        || !Number.isInteger(pageCount)
-        || pageCount < 0
-        || Number(response?.page) !== page
-        || (!Array.isArray(response?.tasks) && !emptyTasks)
-        || (pageCount === 0 && (Number(response?.count) !== 0 || response?.tasks?.length > 0))
-      ) {
-        throw createFlowError(
-          COMMON_ERROR_CODES.API_INVALID_JSON,
-          '已完成任务列表接口失败或分页、tasks 格式无效',
-        );
-      }
-      tasks.push(...(response.tasks || []));
-      if (page >= pageCount) {
-        return tasks;
-      }
+  /** 单次读取已完成任务；合法的 tasks=null 空列表视为空数组。 */
+  async function listCompletedCloudTasks(requestOptions = {}) {
+    const remaining = requestOptions.deadline === undefined
+      ? Infinity
+      : requestOptions.deadline - Date.now();
+    if (remaining <= 0) {
+      throw createFlowError(COMMON_ERROR_CODES.API_TIMEOUT, '已完成任务列表查询超时');
     }
+    const response = await requestApi('GET', '/115/task_lists?stat=11', null, {
+      timeoutMs: Math.min(requestOptions.timeoutMs ?? 10000, remaining),
+    });
+    const emptyTasks = response?.tasks === null && Number(response?.count) === 0;
+    if (!isSuccessfulApiResponse(response)
+      || (!Array.isArray(response?.tasks) && !emptyTasks)) {
+      throw createFlowError(
+        COMMON_ERROR_CODES.API_INVALID_JSON,
+        '已完成任务列表接口失败或 tasks 格式无效',
+      );
+    }
+    return response.tasks || [];
   }
 
   async function listAllFiles(cateId) {
