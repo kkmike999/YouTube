@@ -27,14 +27,14 @@ for code in "${codes[@]}"; do
 
   # fc2、fc2-ppv，以及 MIUM 开头的番号
   if [[ "$code" == [Ff][Cc]2* || "$code" == [Mm][Ii][Uu][Mm]* ]]; then
-    if ! jav_json=$(node heimacili/heimacili_search.js --keyword "$code"); then
+    if ! jav_json=$(node btsearch/btsearch_search.js --keyword "$code"); then
       echo ">>> 获取番号数据失败，跳过: $code" >&2
       continue
     fi
   else
     if ! jav_json=$(node jav/jav_magnet.js --番号 "$code"); then
-      echo ">>> jav_magnet 获取失败，改用 heimacili 搜索: $code" >&2
-      if ! jav_json=$(node heimacili/heimacili_search.js --keyword "$code"); then
+      echo ">>> jav_magnet 获取失败，改用 btsearch 搜索: $code" >&2
+      if ! jav_json=$(node btsearch/btsearch_search.js --keyword "$code"); then
         echo ">>> 获取番号数据失败，跳过: $code" >&2
         continue
       fi

@@ -135,9 +135,9 @@ function isUsableTitle(title, codeMatcher = null) {
     && (!codeMatcher || codeMatcher(value));
 }
 
-async function lookupWithHeimacili(code) {
-  const scriptPath = path.join(__dirname, '..', 'heimacili', 'heimacili_search.js');
-  logStep('改用 heimacili 获取番号标题');
+async function lookupWithBtsearch(code) {
+  const scriptPath = path.join(__dirname, '..', 'btsearch', 'btsearch_search.js');
+  logStep('改用 btsearch 获取番号标题');
   const { stdout } = await execFileAsync(
     process.execPath,
     [scriptPath, '--keyword', code],
@@ -160,7 +160,7 @@ async function loadMetadata(code, codeMatcher) {
 
   if (!record) {
     try {
-      record = await lookupWithHeimacili(code);
+      record = await lookupWithBtsearch(code);
     } catch (error) {
       throw flowError(
         ERROR_CODES.METADATA_NOT_FOUND,
